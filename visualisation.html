@@ -4,10 +4,11 @@
     <meta charset="utf-8">
     <title> title </title>
     <link rel="stylesheet" href="style.css">
-    <script src="script.js"></script>
+    <script src="script.js"> </script>
+    <script src="https://d3js.org/d3.v4.js"></script>
   </head>
-  <body>
-    <svg width="300" height="500" xmlns="http://www.w3.org/2000/svg" id="geneCanvas">
+  <body id="body">
+    <svg width="300" height="200" xmlns="http://www.w3.org/2000/svg" id="geneCanvas">
       <script>
         function onExonClick(evt) {
           window.parent.handleExonClick(evt)
@@ -16,33 +17,5 @@
     </svg>
     <div id="plots">
     </div>
-    <div id="myDiv"></div>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <script>
-      var trace1 = {
-        x: [1, 2, 3, 4],
-        y: [10, 15, 13, 17],
-        mode: 'markers',
-        type: 'scatter'
-      };
-
-      var trace2 = {
-        x: [2, 3, 4, 5],
-        y: [16, 5, 11, 9],
-        mode: 'lines',
-        type: 'scatter'
-      };
-
-      var trace3 = {
-        x: [1, 2, 3, 4],
-        y: [12, 9, 15, 12],
-        mode: 'lines+markers',
-        type: 'scatter'
-      };
-
-      var data = [trace1, trace2, trace3];
-
-      Plotly.newPlot('myDiv', data);
-    </script>
   </body>
 </html>
