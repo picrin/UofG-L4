@@ -2,20 +2,36 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title> title </title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
     <link rel="stylesheet" href="style.css">
     <script src="script.js"> </script>
     <script src="https://d3js.org/d3.v4.js"></script>
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/poole.css">
+    <link rel="stylesheet" href="css/syntax.css">
+    <link rel="stylesheet" href="css/hyde.css">
+    <link rel="stylesheet" href="css/css">
   </head>
   <body id="body">
+  <div class="sidebar" id="sidebar">
+    <ul><a href="#" onclick="getGeneView(id)" data-tc="09872134">ALBM1</a></ul>
+    <ul><span><a href="#" onclick="getGeneView(id)" data-tc="09872134">ALBM1</a></ul>
+  </div>
+  <div class="content container">
     <svg width="300" height="200" xmlns="http://www.w3.org/2000/svg" id="geneCanvas">
       <script>
         function onExonClick(evt) {
           window.parent.handleExonClick(evt)
         }
+        function onAffyClick(evt) {
+          window.parent.handleAffyClick(evt)
+        }
       </script>
     </svg>
     <div id="plots">
     </div>
+  </div>
   </body>
 </html>
