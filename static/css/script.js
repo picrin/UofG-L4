@@ -300,21 +300,26 @@ window.onload = init;
     drawAffy(150, 170, 3, Math.pow(10, -1), "id-321")
     var sidebar = document.getElementById("sidebar")
     for (var i = 0; i < 100; i ++){
-      var link = document.createElement("a")
-      var ul = document.createElement("ul")
-      link.setAttribute("href", "#")
-      link.setAttribute("onclick", "getGeneView(id)")
-      link.setAttribute("data-tc", "0987654312")
-      link.innerHTML = "ALBM1"
-      sidebar.appendChild(ul)
-      ul.appendChild(link)
+
     }
     var httpRequest = new XMLHttpRequest();
     httpRequest.onreadystatechange = function(){
       if (httpRequest.readyState === XMLHttpRequest.DONE) {
-        console.log(httpRequest.textResponse)
+        var geneList = JSON.parse(httpRequest.responseText)
+        var numbers = 0
+        for (var gene of geneList) {
+          console.log(gene)
+          var link = document.createElement("a")
+          var ul = document.createElement("div")
+          link.setAttribute("href", "#")
+          link.setAttribute("onclick", "getGeneView(id)")
+          link.setAttribute("data-tc", "0987654312")
+          link.innerHTML = numbers + "x" + gene.toString()
+          sidebar.appendChild(ul)
+          ul.appendChild(link)
+          numbers+=1
+        }
       } else {
-          // still not ready
       }
     }
     httpRequest.open('GET', 'api/geneList', true);

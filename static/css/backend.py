@@ -248,18 +248,15 @@ def probesetIter(level = None):
 def writePValues(probeset, pvalue):
     redisAlterSplice.zadd("probe$ASPvalue", pvalue, probeset)
 
-totalProbesets = redisAlterSplice.zcard("probe$ASPvalue")
-
-from flask import Flask, request, send_from_directory, current_app
+from flask import Flask
 app = Flask(__name__)
-app.debug=True
 
-@app.route("/api/geneList")
+@app.route("/")
 def hello():
   cutoff = 0.05
   allOurGenes = set()
   counter = 0
-  result = []
+
   for probeset, pvalue in redisAlterSplice.zrange("probe$ASPvalue", 0, -1, withscores = True):
       bonferroniCorrected = pvalue * totalProbesets
       if bonferroniCorrected > cutoff:
@@ -269,15 +266,12 @@ def hello():
       assert(len(transCluster) == 1)
       transCluster = transCluster[0]
       usualName = redisAnnot.smembers(b"search$trans$usual$" + transCluster)
-      result.append([list(usualName), transCluster, bonferroniCorrected])
+      if usualName:
+          print(usualName, bonferroniCorrected)
+      else:
+          print(transCluster, bonferroniCorrected)
       allOurGenes.update(usualName)
       counter += 1
-  return json.dumps(result)
-
-# set the project root directory as the static folder, you can set others.
-@app.route('/<path:path>')
-def hello_world(path):
-    return current_app.send_static_file(path)
-
-if __name__ == '__main__':  # pragma: no cover
+  return json.dumps(allOurGenes)
+if __name__ == "__main__":
     app.run()
