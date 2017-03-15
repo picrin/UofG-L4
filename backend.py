@@ -136,7 +136,7 @@ def pValueForProbeset(modalAllele, probeData):
         left_pvalues.append(regressR.leftpvalue)
         right_pvalues.append(regressR.rightpvalue)
     leftresult = productCDF(product(left_pvalues), len(left_pvalues))
-    rightresult = productCDF(product(right_pvalues), len(right_pvalues))    
+    rightresult = productCDF(product(right_pvalues), len(right_pvalues))
     return min(leftresult, rightresult) * 2
 
 def pValueForProbesetWithoutAS(modalAllele, probeData):
@@ -177,7 +177,7 @@ def plotForProbeset(probeset):
     print("probeset", probeset)
     print("p-value for probeset", pValueForProbeset(modalAllele, intensities))
     print("p-value without AS", pValueForProbesetWithoutAS(modalAllele, intensities))
-    
+
     for seq, intensity in intensities.items():
         plt.figure()
         plt.scatter(modalAllele, intensity)
@@ -279,5 +279,24 @@ def hello():
 def hello_world(path):
     return current_app.send_static_file(path)
 
+import redis
+import json
+
+genecodeDB = 4
+
+genecodeR = redis.StrictRedis(host='localhost', db=genecodeDB)
+
+@app.route('/api/genecode/<path:path>')
+def genes(path):
+    path = path.split("/")
+    c = path[0]
+    left = int(path[1])
+    right = int(path[2])
+    response = []
+    for elem in genecodeR.zrangebyscore("genecode$" + c, left, right):
+        parsedElem = json.loads(elem.decode("ascii", errors="ignore"))
+        response.append(parsedElem)
+    return(json.dumps(response))
+
 if __name__ == '__main__':  # pragma: no cover
-    app.run()
+    app.run(threaded=True)

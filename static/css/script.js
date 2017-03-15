@@ -69,7 +69,6 @@ function plotForExon(exonID) {
   for (var i = 0; i < X.length; i++) {
     data.push([X[i], Y[i]])
   }
-  console.log(data, X, Y)
 
   var margin = {top: 20, right: 15, bottom: 60, left: 60}
   var width = chartHeight - margin.left - margin.right
@@ -130,7 +129,7 @@ function plotForExon(exonID) {
     .attr("cy", function (d) {return y(d[1])} ) // translate y value to a pixel
     .attr("cx", function (d,i) {return x(d[0])} ) // translate x value
     .attr("r", 2);
-    
+
 }
 
 function createExonRect(left, right, track, exonID) {
@@ -151,7 +150,6 @@ function createExonRect(left, right, track, exonID) {
 
 function setMinimumHeight(desiredHeight) {
   var canvas = document.getElementById("geneCanvas")
-  console.log(canvas, desiredHeight)
   var currentHeight = canvas.getAttributeNS(null, "height")
   if (desiredHeight > currentHeight) {
     canvas.setAttributeNS(null, "height", desiredHeight)
@@ -246,9 +244,82 @@ function createConnector(left, right, track) {
   return [leftLine, rightLine]
 }
 
-function drawExons(exons, ids, description, track) {
-  var canvas = document.getElementById("geneCanvas")
+var realGene = [["gene", "chr1", "-", "2460184", "2461684", "ENSG00000197921.5_1", ""],
+                ["transcript", "chr1", "-", "2460184", "2461684", "ENSG00000197921.5_1", "HES5"],
+                ["exon", "chr1", "-", "2461550", "2461684", "ENSG00000197921.5_1", "HES5"],
+                ["CDS", "chr1", "-", "2461550", "2461603", "ENSG00000197921.5_1", "HES5"],
+                ["start_codon", "chr1", "-", "2461601", "2461603", "ENSG00000197921.5_1", "HES5"],
+                ["exon", "chr1", "-", "2461285", "2461450", "ENSG00000197921.5_1", "HES5"],
+                ["CDS", "chr1", "-", "2461285", "2461450", "ENSG00000197921.5_1", "HES5"],
+                ["exon", "chr1", "-", "2460184", "2461188", "ENSG00000197921.5_1", "HES5"],
+                ["CDS", "chr1", "-", "2460911", "2461188", "ENSG00000197921.5_1", "HES5"],
+                ["stop_codon", "chr1", "-", "2460908", "2460910", "ENSG00000197921.5_1", "HES5"],
+                ["UTR", "chr1", "-", "2461604", "2461684", "ENSG00000197921.5_1", "HES5"],
+                ["UTR", "chr1", "-", "2460184", "2460910", "ENSG00000197921.5_1", "HES5"]]
 
+function translateCoord(rangeLeft, rangeRight, coord) {
+  var canvas = document.getElementById("geneCanvas")
+  var gBCR = canvas.getBoundingClientRect()
+  var w = gBCR.right - gBCR.left
+  var newCoord =  ((coord - rangeLeft) / (rangeRight - rangeLeft)) * w
+  return newCoord
+}
+
+var trackRanges = [[]]
+
+function checkInside(left, right, point){
+  var result = (point <= right && left <= point)
+  return result
+}
+
+function chooseTrack(left, right) {
+  console.log(left, right)
+  var tracksInUse = trackRanges.length
+  for (var i = 0; i < tracksInUse; i++) {
+    var goodTrack = true
+    var genesOnTrack = trackRanges[i].length
+    for (var j = 0; j < genesOnTrack; j++) {
+      var testLeft = trackRanges[i][j][0]
+      var testRight = trackRanges[i][j][1]
+      if (checkInside(left, right, testLeft) ||
+          checkInside(left, right, testRight) ||
+          checkInside(testLeft, testRight, left) ||
+          checkInside(testLeft, testRight, right)
+         ) {
+        goodTrack = false
+        break
+      }
+    }
+    if (goodTrack){
+      trackRanges[i].push([left, right])
+      return i
+    }
+  }
+  trackRanges.push([[left, right]])
+  return tracksInUse
+}
+
+function drawExons(units, rangeLeft, rangeRight) {
+  var exons = []
+  var description = ""
+  for (var unit of units) {
+    if (unit[0] == "exon") {
+      if (unit[6] != "") {
+        description = unit[6]
+      }
+      exons.push(
+        [translateCoord(rangeLeft, rangeRight, unit[3]),
+         translateCoord(rangeLeft, rangeRight, unit[4])])
+    }
+  }
+  exons.sort(function(a, b){
+    if(a[0] < b[0]) return -1;
+    if(a[0] > b[0]) return 1;
+    return 0;
+  })
+  console.log(exons)
+  var track = chooseTrack(exons[0][0], exons[exons.length - 1][1])
+  var canvas = document.getElementById("geneCanvas")
   for (var i = 0; i < exons.length - 1; i++) {
     var right = exons[i][1]
     var left = exons[i + 1][0]
@@ -258,7 +329,7 @@ function drawExons(exons, ids, description, track) {
   }
 
   for (var i = 0; i < exons.length; i++) {
-    canvas.appendChild(createExonRect(exons[i][0], exons[i][1], track, ids[i]))
+    canvas.appendChild(createExonRect(exons[i][0], exons[i][1], track, 0))
   }
 
   if (exons.length != 0) {
@@ -277,7 +348,6 @@ function drawExons(exons, ids, description, track) {
 function drawAffy(left, right, track, pValue, affyID) {
   var canvas = document.getElementById("geneCanvas")
   var affyRect = createAffyRect(left, right, track, pValue, affyID)
-  console.log(affyRect)
   canvas.appendChild(affyRect)
   commonTrackElem(track)
   text = document.createElementNS("http://www.w3.org/2000/svg", "text")
@@ -288,41 +358,56 @@ function drawAffy(left, right, track, pValue, affyID) {
   canvas.appendChild(text)
 }
 
+function loadGenes() {
+  var sidebar = document.getElementById("sidebar")
+  var httpRequest = new XMLHttpRequest()
+  httpRequest.onreadystatechange = function(){
+    if (httpRequest.readyState === XMLHttpRequest.DONE) {
+      var geneList = JSON.parse(httpRequest.responseText)
+      var numbers = 0
+      for (var gene of geneList) {
+        var link = document.createElement("a")
+        var ul = document.createElement("div")
+        link.setAttribute("href", "#")
+        link.setAttribute("onclick", "getGeneView(id)")
+        link.setAttribute("data-tc", "0987654312")
+        link.innerHTML = numbers + "x" + gene.toString()
+        sidebar.appendChild(ul)
+        ul.appendChild(link)
+        numbers+=1
+      }
+    }
+  }
+  httpRequest.open('GET', 'api/geneList', true);
+  httpRequest.send(null);
+}
+
+function loadUnits(chr, left, right) {
+  var httpRequest = new XMLHttpRequest()
+  httpRequest.onreadystatechange = function(){
+    if (httpRequest.readyState === XMLHttpRequest.DONE) {
+      var units = JSON.parse(httpRequest.responseText)
+      for (var unit of units) {
+        console.log(unit)
+        drawExons(unit, left, right)
+      }
+    }
+  }
+  httpRequest.open('GET', 'api/genecode/' + chr + "/" + left + "/" + right, true);
+  httpRequest.send(null);
+}
+
+
 (function(window, document, undefined) {
 "use strict"
 
 window.onload = init;
 
   function init() {
-    drawExons(exons, exonID, "CFH", 0)
-    drawExons(exons2, exonID, "CFHR-1", 1)
+
     drawAffy(30, 70, 3, Math.pow(10, -16), "id-123")
     drawAffy(150, 170, 3, Math.pow(10, -1), "id-321")
-    var sidebar = document.getElementById("sidebar")
-    for (var i = 0; i < 100; i ++){
-
-    }
-    var httpRequest = new XMLHttpRequest();
-    httpRequest.onreadystatechange = function(){
-      if (httpRequest.readyState === XMLHttpRequest.DONE) {
-        var geneList = JSON.parse(httpRequest.responseText)
-        var numbers = 0
-        for (var gene of geneList) {
-          console.log(gene)
-          var link = document.createElement("a")
-          var ul = document.createElement("div")
-          link.setAttribute("href", "#")
-          link.setAttribute("onclick", "getGeneView(id)")
-          link.setAttribute("data-tc", "0987654312")
-          link.innerHTML = numbers + "x" + gene.toString()
-          sidebar.appendChild(ul)
-          ul.appendChild(link)
-          numbers+=1
-        }
-      } else {
-      }
-    }
-    httpRequest.open('GET', 'api/geneList', true);
-    httpRequest.send(null);
+    loadGenes()
+    loadUnits("chr1", 2439184, 2461794)
   }
-})(window, document, undefined);
+})(window, document, undefined)
