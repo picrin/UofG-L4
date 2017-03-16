@@ -292,11 +292,40 @@ def genes(path):
     c = path[0]
     left = int(path[1])
     right = int(path[2])
+    return json.dumps(funcGenes(c, left, right))
+
+def funcGenes(c, left, right):
     response = []
     for elem in genecodeR.zrangebyscore("genecode$" + c, left, right):
         parsedElem = json.loads(elem.decode("ascii", errors="ignore"))
         response.append(parsedElem)
-    return(json.dumps(response))
+    return(response)
+
+import redis, json
+
+annotDB = 1
+r = redis.StrictRedis(host='localhost', port=6379, db=annotDB)
+@app.route('/api/clusterID/<path:path>')
+def clusterID(path):
+    chromosome = None
+    leftMost = 2**64
+    rightMost = -2**64
+    result = []
+    for probeset in r.smembers(b'trans$probeset$' + bytes(path)):
+        elems = json.loads(r.hget(b'probeset$metadata', probeset).decode("ascii", errors="ignore"))
+        if elems[3] < leftMost:
+            leftMost = elems[3]
+        if elems[4] > rightMost:
+            rightMost = elems[4]
+        if elems[-1] == "core":
+            probesetData = dataForProbeset(str(elems[0]))[0]
+            checkPValue = pValueForProbeset(modalAllele, probesetData)
+            print(modalAllele)
+            extendedElems = elems + [checkPValue * totalProbesets, modalAllele, probesetData]
+            result.append(extendedElems)
+
+        chromosome = elems[1]
+    return json.dumps([[chromosome, leftMost, rightMost], funcGenes(chromosome, leftMost, rightMost), result])
 
 if __name__ == '__main__':  # pragma: no cover
     app.run(threaded=True)

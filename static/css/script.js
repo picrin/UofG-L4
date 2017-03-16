@@ -46,9 +46,16 @@ function removePlotForExon(exonID) {
   var plots = document.getElementById("plots")
   var plot = document.getElementById("plot-" + exonID)
   plots.removeChild(plot)
+  while (plot !== undefined) {
+    plot = document.getElementById("plot-" + exonID)
+    if (plot !== undefined) {
+      plots.removeChild(plot)
+    }
+  }
+
 }
 
-function plotForExon(exonID) {
+function plotForExon(exonID, X, Y) {
   var plots = document.getElementById("plots")
 
   var exPlotID = "plot-" + exonID
@@ -60,9 +67,6 @@ function plotForExon(exonID) {
 
   var chartHeight = 200
   var chartWidth = 200
-
-  var X = dataX
-  var Y = dataForExon[exonID]
 
   var data = []
 
@@ -151,9 +155,9 @@ function createExonRect(left, right, track, exonID) {
 function setMinimumHeight(desiredHeight) {
   var canvas = document.getElementById("geneCanvas")
   var currentHeight = canvas.getAttributeNS(null, "height")
-  if (desiredHeight > currentHeight) {
-    canvas.setAttributeNS(null, "height", desiredHeight)
-  }
+   if (desiredHeight > currentHeight) {
+      canvas.setAttributeNS(null, "height", desiredHeight + 10)
+    }
 }
 
 function commonTrackElem(track) {
@@ -166,7 +170,7 @@ function createAffyRect(left, right, track, pValue, affyID) {
   exonRect.setAttributeNS(null, "y", topC + trackLocation(track))
   exonRect.setAttributeNS(null, "width", right - left)
   exonRect.setAttributeNS(null, "height", heightC)
-  if (pValue < Math.pow(10, -5)) {
+  if (pValue < 0.05) {
     color = "#ff8772"
   } else {
     color = "#71afff"
@@ -186,7 +190,7 @@ function deselectExon(exonRect) {
   exonRect.removeAttributeNS(null, "stroke-width")
   exonRect.setAttributeNS(null, "fill-opacity", unselectedOpc)
   exonRect.setAttributeNS(null, "data-selected", 0)
-  var exonID = exonRect.getAttributeNS(null, "data-exonID")
+  var exonID = exonRect.getAttributeNS(null, "data-affyID")
   var plotID = exonRect.innerHTML
   releasePlotID()
   removePlotForExon(exonID)
@@ -201,8 +205,15 @@ function selectExon(exonRect) {
   exonRect.setAttributeNS(null, "font-family", "monospace")
   var plotID = getPlotID()
   exonRect.innerHTML = plotID
-  var exonID = exonRect.getAttributeNS(null, "data-exonID")
-  plotForExon(exonID)
+  var exonID = exonRect.getAttributeNS(null, "data-affyID")
+  var p = affyData[exonID]
+  for (var prop in p) {
+    if (!p.hasOwnProperty(prop)) {
+        continue;
+    }
+    plotForExon(exonID, modalAlle, affyData[exonID][prop])
+  }
+
 }
 
 function flipSelection(exonRect) {
@@ -214,10 +225,50 @@ function flipSelection(exonRect) {
   }
 }
 
-function handleExonClick(evt) {
+function handleAffyClick(evt) {
   var svgobj = evt.target
   flipSelection(svgobj)
 }
+
+function clearCanvas() {
+  var myNode = document.getElementById("svgParent")
+  while (myNode.firstChild) {
+    myNode.removeChild(myNode.firstChild)
+  }
+  window.trackRanges = [[]]
+  myNode.innerHTML='<svg width="100%" xmlns="http://www.w3.org/2000/svg" id="geneCanvas" style="border:1px solid black;">'
+
+  //myNode.setAttributeNS(null, "height", 1)
+}
+
+var affyData = {}
+
+var modalAlle = [11, 12, 12, 12, 83, 186, 240, 261, 290, 297, 297, 345, 373, 408, 561, 571, 593, 604, 654, 697, 740, 866, 872, 993, 999, 1000, 1035, 1111, 1261]
+
+function getGeneView(gene) {
+  id = gene.getAttributeNS(null, "data-clusterID")
+  var httpRequest = new XMLHttpRequest()
+  httpRequest.onreadystatechange = function(){
+    if (httpRequest.readyState === XMLHttpRequest.DONE) {
+        var result = JSON.parse(httpRequest.responseText)
+        var units = result[1]
+        var left = result[0][1]
+        var right = result[0][2]
+        clearCanvas()
+        for (unit of units) {
+          drawExons(unit, left, right)
+        }
+        for (exon of result[2]) {
+          drawAffy(exon[3], exon[4], exon[exon.length-3], exon[0], left, right)
+          affyData[exon[0]] = exon[exon.length - 1]
+        }
+      }
+    }
+
+  httpRequest.open('GET', 'api/clusterID/' + id, true);
+  httpRequest.send(null);
+}
+
 
 function createConnector(left, right, track) {
   var trackOffset = trackLocation(track)
@@ -244,19 +295,6 @@ function createConnector(left, right, track) {
   return [leftLine, rightLine]
 }
 
-var realGene = [["gene", "chr1", "-", "2460184", "2461684", "ENSG00000197921.5_1", ""],
-                ["transcript", "chr1", "-", "2460184", "2461684", "ENSG00000197921.5_1", "HES5"],
-                ["exon", "chr1", "-", "2461550", "2461684", "ENSG00000197921.5_1", "HES5"],
-                ["CDS", "chr1", "-", "2461550", "2461603", "ENSG00000197921.5_1", "HES5"],
-                ["start_codon", "chr1", "-", "2461601", "2461603", "ENSG00000197921.5_1", "HES5"],
-                ["exon", "chr1", "-", "2461285", "2461450", "ENSG00000197921.5_1", "HES5"],
-                ["CDS", "chr1", "-", "2461285", "2461450", "ENSG00000197921.5_1", "HES5"],
-                ["exon", "chr1", "-", "2460184", "2461188", "ENSG00000197921.5_1", "HES5"],
-                ["CDS", "chr1", "-", "2460911", "2461188", "ENSG00000197921.5_1", "HES5"],
-                ["stop_codon", "chr1", "-", "2460908", "2460910", "ENSG00000197921.5_1", "HES5"],
-                ["UTR", "chr1", "-", "2461604", "2461684", "ENSG00000197921.5_1", "HES5"],
-                ["UTR", "chr1", "-", "2460184", "2460910", "ENSG00000197921.5_1", "HES5"]]
-
 function translateCoord(rangeLeft, rangeRight, coord) {
   var canvas = document.getElementById("geneCanvas")
   var gBCR = canvas.getBoundingClientRect()
@@ -273,7 +311,6 @@ function checkInside(left, right, point){
 }
 
 function chooseTrack(left, right) {
-  console.log(left, right)
   var tracksInUse = trackRanges.length
   for (var i = 0; i < tracksInUse; i++) {
     var goodTrack = true
@@ -299,6 +336,33 @@ function chooseTrack(left, right) {
   return tracksInUse
 }
 
+var trackRangesAffy = [[]]
+function chooseTrackAffy(left, right) {
+  var tracksInUse = trackRangesAffy.length
+  for (var i = 0; i < tracksInUse; i++) {
+    var goodTrack = true
+    var genesOnTrack = trackRangesAffy[i].length
+    for (var j = 0; j < genesOnTrack; j++) {
+      var testLeft = trackRangesAffy[i][j][0]
+      var testRight = trackRangesAffy[i][j][1]
+      if (checkInside(left, right, testLeft) ||
+          checkInside(left, right, testRight) ||
+          checkInside(testLeft, testRight, left) ||
+          checkInside(testLeft, testRight, right)
+         ) {
+        goodTrack = false
+        break
+      }
+    }
+    if (goodTrack){
+      trackRangesAffy[i].push([left, right])
+      return i + trackRanges.length
+    }
+  }
+  trackRangesAffy.push([[left, right]])
+  return tracksInUse + trackRanges.length
+}
+
 function drawExons(units, rangeLeft, rangeRight) {
   var exons = []
   var description = ""
@@ -317,7 +381,6 @@ function drawExons(units, rangeLeft, rangeRight) {
     if(a[0] > b[0]) return 1;
     return 0;
   })
-  console.log(exons)
   var track = chooseTrack(exons[0][0], exons[exons.length - 1][1])
   var canvas = document.getElementById("geneCanvas")
   for (var i = 0; i < exons.length - 1; i++) {
@@ -345,15 +408,20 @@ function drawExons(units, rangeLeft, rangeRight) {
   commonTrackElem(track)
 }
 
-function drawAffy(left, right, track, pValue, affyID) {
+
+function drawAffy(left, right, pValue, affyID, leftMost, rightMost) {
   var canvas = document.getElementById("geneCanvas")
-  var affyRect = createAffyRect(left, right, track, pValue, affyID)
+  translatedLeft = translateCoord(leftMost, rightMost, left - 0.005 * (rightMost - leftMost))
+  translatedRight = translateCoord(leftMost, rightMost, right + 0.005 * (rightMost - leftMost))
+  var track = chooseTrackAffy(translatedLeft, translatedRight)
+  var affyRect = createAffyRect(translatedLeft, translatedRight, track, pValue, affyID)
   canvas.appendChild(affyRect)
-  commonTrackElem(track)
+  commonTrackElem(track + 1)
   text = document.createElementNS("http://www.w3.org/2000/svg", "text")
   text.setAttributeNS(null, "x", left)
   text.setAttributeNS(null, "y", trackLocation(track+1))
   text.setAttributeNS(null, "font-family", "monospace")
+  text.setAttributeNS(null, "data-probeset", affyID)
   text.innerHTML = affyID
   canvas.appendChild(text)
 }
@@ -367,11 +435,14 @@ function loadGenes() {
       var numbers = 0
       for (var gene of geneList) {
         var link = document.createElement("a")
-        var ul = document.createElement("div")
+        var ul = document.createElement("li")
         link.setAttribute("href", "#")
-        link.setAttribute("onclick", "getGeneView(id)")
-        link.setAttribute("data-tc", "0987654312")
-        link.innerHTML = numbers + "x" + gene.toString()
+        link.setAttribute("onclick", "getGeneView(this)")
+        if (gene[0].length >= 1) {
+          link.innerHTML += gene[0][0]
+        }
+        link.innerHTML += " " + gene[2].toPrecision(2)
+        link.setAttributeNS(null, "data-clusterID", gene[1])
         sidebar.appendChild(ul)
         ul.appendChild(link)
         numbers+=1
@@ -388,7 +459,6 @@ function loadUnits(chr, left, right) {
     if (httpRequest.readyState === XMLHttpRequest.DONE) {
       var units = JSON.parse(httpRequest.responseText)
       for (var unit of units) {
-        console.log(unit)
         drawExons(unit, left, right)
       }
     }
@@ -401,12 +471,9 @@ function loadUnits(chr, left, right) {
 (function(window, document, undefined) {
 "use strict"
 
-window.onload = init;
+window.onload = init
 
   function init() {
-
-    drawAffy(30, 70, 3, Math.pow(10, -16), "id-123")
-    drawAffy(150, 170, 3, Math.pow(10, -1), "id-321")
     loadGenes()
     loadUnits("chr1", 2439184, 2461794)
   }

@@ -13,19 +13,22 @@
     <link rel="stylesheet" href="css/hyde.css">
   </head>
   <body id="body">
-  <div class="sidebar" id="sidebar">
+  <div class="sidebar">
+  <ol id="sidebar"></ol>
   </div>
   <div class="content container">
-    <svg width="100%" height="200" xmlns="http://www.w3.org/2000/svg" id="geneCanvas" style="border:1px solid black;">
-      <script>
-        function onExonClick(evt) {
-          window.parent.handleExonClick(evt)
-        }
-        function onAffyClick(evt) {
-          window.parent.handleAffyClick(evt)
-        }
-      </script>
-    </svg>
+    <div id="svgParent">
+      <svg width="100%" xmlns="http://www.w3.org/2000/svg" id="geneCanvas" style="border:1px solid black;">
+        <script>
+          function onExonClick(evt) {
+            window.parent.handleExonClick(evt)
+          }
+          function onAffyClick(evt) {
+            window.parent.handleAffyClick(evt)
+          }
+        </script>
+      </svg>
+    </div>
     <div id="plots">
     </div>
   </div>
