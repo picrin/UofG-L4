@@ -1,9 +1,7 @@
 import redis
 import random
 import json
-import matplotlib
 import numpy as np
-import matplotlib.pyplot as plt
 import scipy.integrate as integrate
 import scipy.stats as stats
 import scipy.special
@@ -12,8 +10,6 @@ import collections
 import scipy.stats
 import scipy.stats.distributions as distributions
 import sys
-from pylab import rcParams
-import matplotlib.pyplot as plt
 
 
 annotationDB = 1
@@ -24,7 +20,10 @@ redisAnnot = redis.StrictRedis(host='localhost', db=annotationDB)
 redisProbe = redis.StrictRedis(host='localhost', db=probeDB)
 redisAlterSplice = redis.StrictRedis(host='localhost', db=alterSpliceDB)
 
-patientMetadata = json.loads(redisProbe.get("main$alleleData").decode("ascii", errors="ignore"))
+try:
+    patientMetadata = json.loads(redisProbe.get("main$alleleData").decode("ascii", errors="ignore"))
+except Exception:
+    patientMetadata = []
 modalAllele = [mal for mal, _, _, _ in patientMetadata]
 
 LinregressResult = collections.namedtuple("LinregressResult", ["slope", "intercept", "leftpvalue", "rightpvalue", "stderr"])
@@ -147,8 +146,10 @@ def pValueForProbesetWithoutAS(modalAllele, probeData):
             result[j] += v
     linregress = stats.linregress(modalAllele, result)
     return linregress.pvalue
-
-metadataKeys = json.loads(redisAnnot.get(b'main$metadataKeys').decode("ascii", errors="ignore"))
+try:
+    metadataKeys = json.loads(redisAnnot.get(b'main$metadataKeys').decode("ascii", errors="ignore"))
+except Exception:
+    metadataKeys = []
 metadataToIndex = {key:i for i, key in enumerate(metadataKeys)}
 
 def checkProbesetLevel(probeset):
@@ -248,7 +249,10 @@ def probesetIter(level = None):
 def writePValues(probeset, pvalue):
     redisAlterSplice.zadd("probe$ASPvalue", pvalue, probeset)
 
-totalProbesets = redisAlterSplice.zcard("probe$ASPvalue")
+try:
+    totalProbesets = redisAlterSplice.zcard("probe$ASPvalue")
+except Exception:
+    totalProbesets = 0
 
 from flask import Flask, request, send_from_directory, current_app
 app = Flask(__name__)
@@ -328,4 +332,4 @@ def clusterID(path):
     return json.dumps([[chromosome, leftMost, rightMost], funcGenes(chromosome, leftMost, rightMost), result])
 
 if __name__ == '__main__':  # pragma: no cover
-    app.run(threaded=True)
+    app.run(threaded=True, port=80, host="0.0.0.0")
