@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import redis
 import random
 import json

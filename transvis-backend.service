@@ -1,0 +1,12 @@
+[Unit]
+Description=Gunicorn instance to serve myproject
+After=network.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory=/apps/transvis/
+ExecStart=/apps/transvis/backend.py
+
+[Install]
+WantedBy=multi-user.target
