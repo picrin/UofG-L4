@@ -15,10 +15,11 @@ import sys
 annotationDB = 1
 probeDB = 2
 alterSpliceDB = 3
+port = 2050
 
-redisAnnot = redis.StrictRedis(host='localhost', db=annotationDB)
-redisProbe = redis.StrictRedis(host='localhost', db=probeDB)
-redisAlterSplice = redis.StrictRedis(host='localhost', db=alterSpliceDB)
+redisAnnot = redis.StrictRedis(host='localhost', db=annotationDB, port=2050)
+redisProbe = redis.StrictRedis(host='localhost', db=probeDB, port=2050)
+redisAlterSplice = redis.StrictRedis(host='localhost', db=alterSpliceDB, port=2050)
 
 try:
     patientMetadata = json.loads(redisProbe.get("main$alleleData").decode("ascii", errors="ignore"))
@@ -282,6 +283,10 @@ def hello():
 @app.route('/<path:path>')
 def hello_world(path):
     return current_app.send_static_file(path)
+
+@app.route('/')
+def serve_index():
+    return current_app.send_static_file("index.html")
 
 import redis
 import json
