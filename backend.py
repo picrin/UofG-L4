@@ -17,9 +17,9 @@ probeDB = 2
 alterSpliceDB = 3
 port = 2050
 
-redisAnnot = redis.StrictRedis(host='localhost', db=annotationDB, port=2050)
-redisProbe = redis.StrictRedis(host='localhost', db=probeDB, port=2050)
-redisAlterSplice = redis.StrictRedis(host='localhost', db=alterSpliceDB, port=2050)
+redisAnnot = redis.StrictRedis(host='localhost', db=annotationDB, port=port)
+redisProbe = redis.StrictRedis(host='localhost', db=probeDB, port=port)
+redisAlterSplice = redis.StrictRedis(host='localhost', db=alterSpliceDB, port=port)
 
 try:
     patientMetadata = json.loads(redisProbe.get("main$alleleData").decode("ascii", errors="ignore"))
@@ -293,7 +293,7 @@ import json
 
 genecodeDB = 4
 
-genecodeR = redis.StrictRedis(host='localhost', db=genecodeDB)
+genecodeR = redis.StrictRedis(host='localhost', db=genecodeDB, port=port)
 
 @app.route('/api/genecode/<path:path>')
 def genes(path):
@@ -313,7 +313,7 @@ def funcGenes(c, left, right):
 import redis, json
 
 annotDB = 1
-r = redis.StrictRedis(host='localhost', port=6379, db=annotDB)
+r = redis.StrictRedis(host='localhost', db=annotDB, port=port)
 @app.route('/api/clusterID/<path:path>')
 def clusterID(path):
     chromosome = None
