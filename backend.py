@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 import redis
 import random
 import json
@@ -12,21 +12,38 @@ import scipy.stats
 import scipy.stats.distributions as distributions
 import sys
 
-
 annotationDB = 1
 probeDB = 2
 alterSpliceDB = 3
+genecodeDB = 4
 port = 2050
 
+redisGenecode = redis.StrictRedis(host='localhost', db=genecodeDB, port=port)
 redisAnnot = redis.StrictRedis(host='localhost', db=annotationDB, port=port)
 redisProbe = redis.StrictRedis(host='localhost', db=probeDB, port=port)
 redisAlterSplice = redis.StrictRedis(host='localhost', db=alterSpliceDB, port=port)
 
-try:
-    patientMetadata = json.loads(redisProbe.get("main$alleleData").decode("ascii", errors="ignore"))
-except Exception:
-    patientMetadata = []
-modalAllele = [mal for mal, _, _, _ in patientMetadata]
+cache_db = {}
+def cache(func):
+    def wrapper(x=None):
+        if func.__name__ in cache_db:
+            return cache_db[func.__name__]
+        funcResult = func()
+        cache_db[func.__name__] = funcResult
+        return funcResult
+    return wrapper
+
+def d(bytesa):
+    return bytesa.decode("ascii", errors="ignore")
+
+@cache
+def patientMetadata():
+    return json.loads(redisProbe.get("main$alleleData").decode("ascii", errors="ignore"))
+
+@cache
+def modalAllele():
+    metadata = patientMetadata()
+    return [mal for mal, _, _, _ in patientMetadata]
 
 LinregressResult = collections.namedtuple("LinregressResult", ["slope", "intercept", "leftpvalue", "rightpvalue", "stderr"])
 
@@ -140,6 +157,15 @@ def pValueForProbeset(modalAllele, probeData):
     rightresult = productCDF(product(right_pvalues), len(right_pvalues))
     return min(leftresult, rightresult) * 2
 
+@cache
+def metadataKeys():
+    return json.loads(redisAnnot.get(b'main$metadataKeys').decode("ascii", errors="ignore"))
+
+@cache
+def metadataToIndex():
+    return {key:i for i, key in enumerate(metadataKeys)}
+
+
 def pValueForProbesetWithoutAS(modalAllele, probeData):
     result = [0] * len(modalAllele)
     for seq, data in probeData.items():
@@ -148,15 +174,11 @@ def pValueForProbesetWithoutAS(modalAllele, probeData):
             result[j] += v
     linregress = stats.linregress(modalAllele, result)
     return linregress.pvalue
-try:
-    metadataKeys = json.loads(redisAnnot.get(b'main$metadataKeys').decode("ascii", errors="ignore"))
-except Exception:
-    metadataKeys = []
-metadataToIndex = {key:i for i, key in enumerate(metadataKeys)}
+
 
 def checkProbesetLevel(probeset):
     metadata = json.loads(redisAnnot.hget(b'probeset$metadata', probeset).decode("ascii", errors="ignore"))
-    result = metadata[metadataToIndex["level"]]
+    result = metadata[metadataToIndex()["level"]]
     return result
 
 def dataForProbeset(probeset):
@@ -178,13 +200,13 @@ def dataForProbeset(probeset):
 def plotForProbeset(probeset):
     intensities, probemetadata = dataForProbeset(probeset)
     print("probeset", probeset)
-    print("p-value for probeset", pValueForProbeset(modalAllele, intensities))
-    print("p-value without AS", pValueForProbesetWithoutAS(modalAllele, intensities))
+    print("p-value for probeset", pValueForProbeset(modalAllele(), intensities))
+    print("p-value without AS", pValueForProbesetWithoutAS(modalAllele(), intensities))
 
     for seq, intensity in intensities.items():
         plt.figure()
-        plt.scatter(modalAllele, intensity)
-        plt.plot(np.unique(modalAllele), np.poly1d(np.polyfit(modalAllele, intensity, 1))(np.unique(modalAllele)))
+        plt.scatter(modalAllele(), intensity)
+        plt.plot(np.unique(modalAllele()), np.poly1d(np.polyfit(modalAllele(), intensity, 1))(np.unique(modalAllele())))
         plt.title(seq[::-1])
         print("seqInv:", seq[::-1])
 
@@ -203,7 +225,7 @@ def getProbesets(cluster):
 
 def geneLevelASPValues(cluster, customMA = None, probesets = None):
     if not customMA:
-        customMA = modalAllele
+        customMA = modalAllele()
     allProbeData = []
     if probesets is None:
         probesets = getProbesets(cluster)
@@ -251,34 +273,35 @@ def probesetIter(level = None):
 def writePValues(probeset, pvalue):
     redisAlterSplice.zadd("probe$ASPvalue", pvalue, probeset)
 
-try:
-    totalProbesets = redisAlterSplice.zcard("probe$ASPvalue")
-except Exception:
-    totalProbesets = 0
+@cache
+def totalProbesets():
+    return redisAlterSplice.zcard("probe$ASPvalue")
 
 from flask import Flask, request, send_from_directory, current_app
 app = Flask(__name__)
+
 app.debug=True
 
 @app.route("/api/geneList")
 def hello():
-  cutoff = 0.05
-  allOurGenes = set()
-  counter = 0
-  result = []
-  for probeset, pvalue in redisAlterSplice.zrange("probe$ASPvalue", 0, -1, withscores = True):
-      bonferroniCorrected = pvalue * totalProbesets
-      if bonferroniCorrected > cutoff:
-          break
-      transCluster = redisAnnot.smembers(b"search$probeset$" + probeset)
-      transCluster = list(transCluster)
-      assert(len(transCluster) == 1)
-      transCluster = transCluster[0]
-      usualName = redisAnnot.smembers(b"search$trans$usual$" + transCluster)
-      result.append([list(usualName), transCluster, bonferroniCorrected])
-      allOurGenes.update(usualName)
-      counter += 1
-  return json.dumps(result)
+    cutoff = 0.05
+    allOurGenes = set()
+    counter = 0
+    result = []
+    for probeset, pvalue in redisAlterSplice.zrange("probe$ASPvalue", 0, -1, withscores = True):
+        bonferroniCorrected = pvalue * totalProbesets()
+        if bonferroniCorrected > cutoff:
+            break
+        transCluster = redisAnnot.smembers(b"search$probeset$" + probeset)
+        transCluster = list(transCluster)
+        assert(len(transCluster) == 1)
+        transCluster = transCluster[0]
+        usualName = redisAnnot.smembers(b"search$trans$usual$" + transCluster)
+        result.append([list(d(i) for i in usualName), d(transCluster), bonferroniCorrected])
+        allOurGenes.update(usualName)
+        counter += 1
+    print(result)
+    return json.dumps(result)
 
 # set the project root directory as the static folder, you can set others.
 @app.route('/<path:path>')
@@ -292,9 +315,6 @@ def serve_index():
 import redis
 import json
 
-genecodeDB = 4
-
-genecodeR = redis.StrictRedis(host='localhost', db=genecodeDB, port=port)
 
 @app.route('/api/genecode/<path:path>')
 def genes(path):
@@ -306,12 +326,16 @@ def genes(path):
 
 def funcGenes(c, left, right):
     response = []
-    for elem in genecodeR.zrangebyscore("genecode$" + c, left, right):
+    for elem in redisGenecode.zrangebyscore("genecode$" + c, left, right):
         parsedElem = json.loads(elem.decode("ascii", errors="ignore"))
         response.append(parsedElem)
     return(response)
 
 import redis, json
+
+@app.errorhandler(redis.exceptions.ConnectionError)
+def dberror(e):
+    return json.dumps({"error": "db"}), 500
 
 annotDB = 1
 r = redis.StrictRedis(host='localhost', db=annotDB, port=port)
@@ -329,9 +353,9 @@ def clusterID(path):
             rightMost = elems[4]
         if elems[-1] == "core":
             probesetData = dataForProbeset(str(elems[0]))[0]
-            checkPValue = pValueForProbeset(modalAllele, probesetData)
-            print(modalAllele)
-            extendedElems = elems + [checkPValue * totalProbesets, modalAllele, probesetData]
+            checkPValue = pValueForProbeset(modalAllele(), probesetData)
+            print(modalAllele())
+            extendedElems = elems + [checkPValue * totalProbesets(), modalAllele(), probesetData]
             result.append(extendedElems)
 
         chromosome = elems[1]
