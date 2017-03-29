@@ -1,5 +1,6 @@
 dump.rdb
 log
 transvis.pem
-venv
+venv3
+activate
 *.pyc

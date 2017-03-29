@@ -43,8 +43,10 @@ var dataForExon = {
 }
 
 function removePlotForExon(exonID) {
-  var plots = document.getElementById("plots")
-  var plot = document.getElementById("plot-" + exonID)
+  var geneCanvas = window.parent.document.getElementById("genePlots")
+  var doc = geneCanvas.contentDocument
+  var plots = doc.getElementById("plots")
+  var plot = doc.getElementById("plot-" + exonID)
   plots.removeChild(plot)
   while (plot !== undefined) {
     plot = document.getElementById("plot-" + exonID)
@@ -52,18 +54,44 @@ function removePlotForExon(exonID) {
       plots.removeChild(plot)
     }
   }
+}
+
+function chooseGene(evt) {
+  console.log(evt.target.value)
 
 }
 
-function plotForExon(exonID, X, Y) {
-  var plots = document.getElementById("plots")
+function handleRemove() {
+  var geneCanvas = window.parent.document.getElementById("genePlots")
+  geneCanvas.contentWindow.clickedButton.parentElement.parentElement.remove()
+}
 
+function containerForExonPlot(exonID) {
+  var geneCanvas = window.parent.document.getElementById("genePlots")
+  var doc = geneCanvas.contentDocument
+  console.log(doc)
+  var plots = doc.getElementById("plots")
+  console.log(plots)
   var exPlotID = "plot-" + exonID
+  container = document.createElementNS(null, "tr")
+  container.setAttribute("border", 1)
 
-  div = document.createElementNS(null, "div")
-  div.id = exPlotID
+  outerButton = document.createElementNS(null, "th")
+  button = document.createElement("button")
+  button.innerHTML = "Remove"
+  outerButton.appendChild(button)
+  container.appendChild(outerButton)
+  var clickedButton
+  button.setAttribute("onclick", "this.parentElement.parentElement.remove()")
+  container.id = exPlotID
+  plots.appendChild(container)
+  return container
+}
 
-  plots.appendChild(div)
+function plotForExon(container, X, Y) {
+
+  div = document.createElement("th")
+  container.appendChild(div)
 
   var chartHeight = 200
   var chartWidth = 200
@@ -153,7 +181,9 @@ function createExonRect(left, right, track, exonID) {
 }
 
 function setMinimumHeight(desiredHeight) {
-  var canvas = document.getElementById("geneCanvas")
+  var geneCanvas = window.parent.document.getElementById("geneCanvas")
+  var doc = geneCanvas.contentDocument
+  var canvas = doc.getElementById("geneCanvas")
   var currentHeight = canvas.getAttributeNS(null, "height")
    if (desiredHeight > currentHeight) {
       canvas.setAttributeNS(null, "height", desiredHeight + 10)
@@ -206,12 +236,18 @@ function selectExon(exonRect) {
   var plotID = getPlotID()
   exonRect.innerHTML = plotID
   var exonID = exonRect.getAttributeNS(null, "data-affyID")
+
+  var geneCanvas = window.parent.document.getElementById("geneList")
+  var affyData = geneCanvas.contentWindow.affyData
+
   var p = affyData[exonID]
+
+  var container = containerForExonPlot(exonID)
   for (var prop in p) {
     if (!p.hasOwnProperty(prop)) {
         continue;
     }
-    plotForExon(exonID, modalAlle, affyData[exonID][prop])
+    plotForExon(container, modalAlle, affyData[exonID][prop])
   }
 
 }
@@ -231,7 +267,9 @@ function handleAffyClick(evt) {
 }
 
 function clearCanvas() {
-  var myNode = document.getElementById("svgParent")
+  var geneCanvas = window.parent.document.getElementById("geneCanvas")
+  var doc = geneCanvas.contentDocument
+  var myNode = doc.getElementById("svgParent")
   while (myNode.firstChild) {
     myNode.removeChild(myNode.firstChild)
   }
@@ -247,6 +285,7 @@ var modalAlle = [11, 12, 12, 12, 83, 186, 240, 261, 290, 297, 297, 345, 373, 408
 
 function getGeneView(gene) {
   id = gene.getAttributeNS(null, "data-clusterID")
+  console.log(id)
   var httpRequest = new XMLHttpRequest()
   httpRequest.onreadystatechange = function(){
     if (httpRequest.readyState === XMLHttpRequest.DONE) {
@@ -265,7 +304,7 @@ function getGeneView(gene) {
       }
     }
 
-  httpRequest.open('GET', 'api/clusterID/' + id, true);
+  httpRequest.open('GET', '/api/clusterID/' + id, true);
   httpRequest.send(null);
 }
 
@@ -296,7 +335,9 @@ function createConnector(left, right, track) {
 }
 
 function translateCoord(rangeLeft, rangeRight, coord) {
-  var canvas = document.getElementById("geneCanvas")
+  var geneCanvas = window.parent.document.getElementById("geneCanvas")
+  var doc = geneCanvas.contentDocument
+  var canvas = doc.getElementById("geneCanvas")
   var gBCR = canvas.getBoundingClientRect()
   var w = gBCR.right - gBCR.left
   var newCoord =  ((coord - rangeLeft) / (rangeRight - rangeLeft)) * w
@@ -382,7 +423,9 @@ function drawExons(units, rangeLeft, rangeRight) {
     return 0;
   })
   var track = chooseTrack(exons[0][0], exons[exons.length - 1][1])
-  var canvas = document.getElementById("geneCanvas")
+  var geneCanvas = window.parent.document.getElementById("geneCanvas")
+  var doc = geneCanvas.contentDocument
+  var canvas = doc.getElementById("geneCanvas")
   for (var i = 0; i < exons.length - 1; i++) {
     var right = exons[i][1]
     var left = exons[i + 1][0]
@@ -410,7 +453,9 @@ function drawExons(units, rangeLeft, rangeRight) {
 
 
 function drawAffy(left, right, pValue, affyID, leftMost, rightMost) {
-  var canvas = document.getElementById("geneCanvas")
+  var geneCanvas = window.parent.document.getElementById("geneCanvas")
+  var doc = geneCanvas.contentDocument
+  var canvas = doc.getElementById("geneCanvas")
   translatedLeft = translateCoord(leftMost, rightMost, left - 0.005 * (rightMost - leftMost))
   translatedRight = translateCoord(leftMost, rightMost, right + 0.005 * (rightMost - leftMost))
   var track = chooseTrackAffy(translatedLeft, translatedRight)
@@ -427,6 +472,7 @@ function drawAffy(left, right, pValue, affyID, leftMost, rightMost) {
 }
 
 function loadGenes() {
+  var i = 1
   var sidebar = document.getElementById("sidebar")
   var httpRequest = new XMLHttpRequest()
   httpRequest.onreadystatechange = function(){
@@ -435,21 +481,31 @@ function loadGenes() {
       var numbers = 0
       for (var gene of geneList) {
         var link = document.createElement("a")
-        var ul = document.createElement("li")
+        var row = document.createElement("tr")
+        var left = document.createElement("th")
+        var middle = document.createElement("th")
+        var right = document.createElement("th")
         link.setAttribute("href", "#")
         link.setAttribute("onclick", "getGeneView(this)")
         if (gene[0].length >= 1) {
-          link.innerHTML += gene[0][0]
+          link.innerHTML = gene[0][0]
+        } else {
+          link.innerHTML = "?"
         }
-        link.innerHTML += " " + gene[2].toPrecision(2)
+        left.innerHTML = i + "."
+        i += 1
+        right.innerHTML = gene[2].toPrecision(2)
         link.setAttributeNS(null, "data-clusterID", gene[1])
-        sidebar.appendChild(ul)
-        ul.appendChild(link)
+        middle.appendChild(link)
+        sidebar.appendChild(row)
+        row.appendChild(left)
+        row.appendChild(middle)
+        row.appendChild(right)
         numbers+=1
       }
     }
   }
-  httpRequest.open('GET', 'api/geneList', true);
+  httpRequest.open('GET', '/api/geneList', true);
   httpRequest.send(null);
 }
 
@@ -463,16 +519,14 @@ function loadUnits(chr, left, right) {
       }
     }
   }
-  httpRequest.open('GET', 'api/genecode/' + chr + "/" + left + "/" + right, true);
+  httpRequest.open('GET', '/api/genecode/' + chr + ":" + left + ":" + right, true);
   httpRequest.send(null);
 }
 
 
 (function(window, document, undefined) {
-"use strict"
-
-window.onload = init
-
+  "use strict"
+  window.onload = init
   function init() {
     loadGenes()
     loadUnits("chr1", 2439184, 2461794)

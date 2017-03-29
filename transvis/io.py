@@ -5,6 +5,7 @@ Module to read genomic data from redis.
 import redis
 import fakeredis
 import json
+from transvis.utils import *
 
 
 annotationDB = 1
@@ -15,41 +16,20 @@ genecodeDB = 4
 redisConn = {}
 
 
-def d(bytes):
-    """
-    A dumb decoder from bytes to ascii. Should only be used where unicode is
-    not expected by design, e.g. gene names on transcription cluster IDs.
-
-    Should not be used where unicode is expected.
-
-    @return: a string representation of bytes.
-
-    @param bytes: a bytes-like object.
-    """
-    return bytes.decode("ascii", errors="ignore")
-
-
-def e(str):
-    """
-    A dumb encoder from python string to bytes. Should only be used where
-    unicode is not expected by design, e.g. gene names on transcription cluster
-    IDs.
-
-    Should not be used where unicode is expected.
-
-    @return: a string representation of bytes.
-
-    @param str: a string-like object.
-    """
-    return bytes(str, encoding="ascii", errors="ignore")
-
-
 def initDB(host="localhost", port=2050):
     """
     Initializes connection to a real redis instance running on a given
     interface and a given port. This function is not expected to raise any
     exceptions. If database is not accessible on the given interface/port,
     redisConn.exceptions.ConnectionError will be raised.
+
+    To access probe data use redisConn["probe"]
+
+    To access annotation data use redisConn["annot"]
+
+    To access alternative splicing data use redisConn["alterSplice"]
+
+    To access genecode data use redisConn["genecode"]
 
     For the purpose of testing use initFakeDB.
 
@@ -105,9 +85,9 @@ def probesetToTrans(probeset):
     @return: a set (mostly 1-element) of transcription cluster IDs.
     """
     return set(d(i) for i in redisConn["annot"].smembers("search$probeset$" +
-                                                         str(probeset)))
+                                                         convertToStr(probeset)))
 
-
+@cache
 def metadataKeys():
     """
     Retrieves a list of headers, which can be used to understand the output of
@@ -184,7 +164,7 @@ def transToExtended(trans):
     return set(d(i) for i in redisConn["annot"].smembers(
             "search$trans$weird$" + str(trans)))
 
-
+@cache
 def alleleData():
     """
     Return patient data in form of quadruples: [modalAllele, progenitalAllele,
@@ -197,6 +177,9 @@ def alleleData():
     except AttributeError:
         return []
 
+@cache
+def totalProbesets():
+    return redisConn["alterSplice"].zcard("probe$ASPvalue")
 
 def probesetChipMetadata(probeset):
     """
@@ -209,9 +192,10 @@ def probesetChipMetadata(probeset):
     """
     try:
         return json.loads(d(redisConn["probe"].
-                            hget("probes$metadata", str(probeset))))
+                            hget("probes$metadata", convertToStr(probeset))))
     except AttributeError:
         return []
+
 
 def probesetPatientData(probeset):
     """
@@ -224,22 +208,27 @@ def probesetPatientData(probeset):
     L{alleleData}
     """
     address = "probes$probeset$" + str(probeset)
-    length = redisConn["probe"].llen(address)
-    patientData = []
-    for i in range(length):
-        patientData.append(json.loads(d(redisConn["probe"].lindex(address, i))))
-    return patientData[::-1]
+    patientData = redisConn["probe"].lrange(address, 0, -1)
+    return [json.loads(d(i)) for i in patientData[::-1]]
 
+def convertToStr(bytesOrInt):
+    try:
+        return d(bytesOrInt)
+    except AttributeError:
+        return str(bytesOrInt)
+
+# TODO make these to be tests.
 initDB()
-print(metadataKeys())
-print(transToProbeset(2315100))
-print(geneToTrans("MBNL1"))
-print(probesetAnnotationMetadata(2315104))
-print(probesetToTrans(2819466))
-print(extendedToTrans('NONHSAT051717'))
-print(transToGene(2315100))
-print(transToExtended(2315100))
-print(alleleData())
-print(probesetChipMetadata(3973794))
-
-print(probesetPatientData(2819466))
+# print(metadataKeys())
+# print(transToProbeset(2315100))
+# print(geneToTrans("MBNL1"))
+# print(probesetAnnotationMetadata(2315104))
+# print(type(convertToStr(b'10')))
+print(list(probesetToTrans(b'3307988')))
+# print(extendedToTrans('NONHSAT051717'))
+# print(transToGene(2315100))
+# print(transToExtended(2315100))
+# print(alleleData())
+# print(probesetChipMetadata(3973794))
+# print(probesetPatientData(2819466))
+# print(dataForProbeset(2819466))

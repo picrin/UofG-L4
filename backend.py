@@ -11,212 +11,16 @@ import collections
 import scipy.stats
 import scipy.stats.distributions as distributions
 import sys
+from transvis.utils import *
+from transvis.io import *
+from transvis.alterSplice import *
 
-annotationDB = 1
-probeDB = 2
-alterSpliceDB = 3
-genecodeDB = 4
-port = 2050
-
-redisGenecode = redis.StrictRedis(host='localhost', db=genecodeDB, port=port)
-redisAnnot = redis.StrictRedis(host='localhost', db=annotationDB, port=port)
-redisProbe = redis.StrictRedis(host='localhost', db=probeDB, port=port)
-redisAlterSplice = redis.StrictRedis(host='localhost', db=alterSpliceDB, port=port)
-
-cache_db = {}
-def cache(func):
-    def wrapper(x=None):
-        if func.__name__ in cache_db:
-            return cache_db[func.__name__]
-        funcResult = func()
-        cache_db[func.__name__] = funcResult
-        return funcResult
-    return wrapper
-
-def d(bytesa):
-    return bytesa.decode("ascii", errors="ignore")
-
-@cache
-def patientMetadata():
-    return json.loads(redisProbe.get("main$alleleData").decode("ascii", errors="ignore"))
-
-@cache
-def modalAllele():
-    metadata = patientMetadata()
-    return [mal for mal, _, _, _ in patientMetadata]
-
-LinregressResult = collections.namedtuple("LinregressResult", ["slope", "intercept", "leftpvalue", "rightpvalue", "stderr"])
-
-def linregressTesting(X, Y):
-    sampleSize = len(X)
-    # Compute averages of X and Y
-    avgX = sum(X)/sampleSize
-    avgY = sum(Y)/sampleSize
-
-    # Partial steps to compute estimators of linear regression parameters.
-    XDiff = [X_i - avgX for X_i in X]
-    XDiffSquared = [i*i for i in XDiff]
-    YDiff = [Y_i - avgY for Y_i in Y]
-
-    # B1 is the estimator of slope.
-    # B0 is the estimator of intercept.
-    # r is the estimator of Y given X.
-    B1 = sum(x * y for x, y in zip(XDiff, YDiff)) / (sum(XDiffSquared))
-    B0 = avgY - B1 * avgX
-    r = lambda x: B0 + B1 * x
-
-    # Partial steps to compute Wald Statistic.
-    errs = [y - r(x) for x, y in zip(X, Y)]
-    errStd = math.sqrt(sum([err**2 for err in errs]) / (sampleSize - 2))
-    XStd = math.sqrt(sum([diff**2 for diff in XDiff]) / sampleSize)
-    stdB1 = errStd / (XStd * math.sqrt(sampleSize))
-
-    # Wald Statistic.
-    W = (B1 - 0) / stdB1
-
-    # one-tailed pvalues of Wald Test with B1 under T distribution with (sampleSize - 2) degrees of freedom.
-    # testing B1 < 0 yields leftpvalue
-    # testing B1 > 0 yields rightpvalue
-    leftpvalue = distributions.t.cdf(W, sampleSize - 2)
-    rightpvalue = 1 - leftpvalue
-
-    resultT = LinregressResult(slope=B1, intercept=B0, leftpvalue=leftpvalue, rightpvalue=rightpvalue, stderr=stdB1)
-    return resultT
-
-# That's slightly more numerically stable.
-def linregress(x, y):
-    TINY = 1.0e-20
-    if y is None:  # x is a (2, N) or (N, 2) shaped array_like
-        x = np.asarray(x)
-        if x.shape[0] == 2:
-            x, y = x
-        elif x.shape[1] == 2:
-            x, y = x.T
-        else:
-            msg = ("If only `x` is given as input, it has to be of shape "
-                   "(2, N) or (N, 2), provided shape was %s" % str(x.shape))
-            raise ValueError(msg)
-    else:
-        x = np.asarray(x)
-        y = np.asarray(y)
-
-    if x.size == 0 or y.size == 0:
-        raise ValueError("Inputs must not be empty.")
-
-    n = len(x)
-    xmean = np.mean(x, None)
-    ymean = np.mean(y, None)
-
-    # average sum of squares:
-    ssxm, ssxym, ssyxm, ssym = np.cov(x, y, bias=1).flat
-    r_num = ssxym
-    r_den = np.sqrt(ssxm * ssym)
-    if r_den == 0.0:
-        r = 0.0
-    else:
-        r = r_num / r_den
-        # test for numerical error propagation
-        if r > 1.0:
-            r = 1.0
-        elif r < -1.0:
-            r = -1.0
-
-    df = n - 2
-    t = r * np.sqrt(df / ((1.0 - r + TINY)*(1.0 + r + TINY)))
-    leftpvalue = distributions.t.cdf(t, n - 2)
-    rightpvalue = 1 - leftpvalue
-    slope = r_num / ssxm
-    intercept = ymean - slope*xmean
-    sterrest = np.sqrt((1 - r**2) * ssym / ssxm / df)
-    return LinregressResult(slope, intercept, leftpvalue, rightpvalue, sterrest)
-
-def productPDF(x, n):
-    return ((-1 * math.log(x)) ** (n - 1)) / math.factorial(n - 1)
-
-def productCDF(x, n):
-    if x < 0 or x > 1:
-        raise ValueError("intermediate p-values must be in range [0, 1]")
-    else:
-        return scipy.special.gammaincc(n, -math.log(x))
-
-def product(lista):
-    result = 1
-    for elem in lista:
-        result *= elem
-    return result
-
-def pValueForProbeset(modalAllele, probeData):
-    left_pvalues = []
-    right_pvalues = []
-    for seq, data in probeData.items():
-        assert(len(modalAllele) == len(data))
-        regressR = linregress(modalAllele, data)
-        left_pvalues.append(regressR.leftpvalue)
-        right_pvalues.append(regressR.rightpvalue)
-    leftresult = productCDF(product(left_pvalues), len(left_pvalues))
-    rightresult = productCDF(product(right_pvalues), len(right_pvalues))
-    return min(leftresult, rightresult) * 2
-
-@cache
-def metadataKeys():
-    return json.loads(redisAnnot.get(b'main$metadataKeys').decode("ascii", errors="ignore"))
-
-@cache
-def metadataToIndex():
-    return {key:i for i, key in enumerate(metadataKeys)}
-
-
-def pValueForProbesetWithoutAS(modalAllele, probeData):
-    result = [0] * len(modalAllele)
-    for seq, data in probeData.items():
-        assert(len(modalAllele) == len(data))
-        for j, v in enumerate(data):
-            result[j] += v
-    linregress = stats.linregress(modalAllele, result)
-    return linregress.pvalue
-
+initDB()
 
 def checkProbesetLevel(probeset):
-    metadata = json.loads(redisAnnot.hget(b'probeset$metadata', probeset).decode("ascii", errors="ignore"))
+    metadata = probesetAnnotationMetadata(probeset)
     result = metadata[metadataToIndex()["level"]]
     return result
-
-def dataForProbeset(probeset):
-    key = b"probes$probeset$" + probeset
-    metadatakey = b"probes$metadata"
-    probemetadata = json.loads(redisProbe.hget(metadatakey, probeset).decode("ascii", errors="ignore"))
-    indexToSeq = {}
-    data = {}
-    for i, seq in enumerate(probemetadata):
-        indexToSeq[i] = seq[0]
-        data[seq[0]] = []
-    length = redisProbe.llen(key)
-    for i in range(length):
-        for j, intensity in enumerate(json.loads(redisProbe.lindex(key, i).decode("ascii", errors="ignore"))):
-            data[indexToSeq[j]].append(intensity)
-    data = {seq:data[::-1] for seq, data in data.items()}
-    return data, probemetadata
-
-def plotForProbeset(probeset):
-    intensities, probemetadata = dataForProbeset(probeset)
-    print("probeset", probeset)
-    print("p-value for probeset", pValueForProbeset(modalAllele(), intensities))
-    print("p-value without AS", pValueForProbesetWithoutAS(modalAllele(), intensities))
-
-    for seq, intensity in intensities.items():
-        plt.figure()
-        plt.scatter(modalAllele(), intensity)
-        plt.plot(np.unique(modalAllele()), np.poly1d(np.polyfit(modalAllele(), intensity, 1))(np.unique(modalAllele())))
-        plt.title(seq[::-1])
-        print("seqInv:", seq[::-1])
-
-def getClusters(gene):
-    clusters = redisAnnot.smembers(b"search$usual$" + gene)
-    return clusters
-
-def getClusters2(gene):
-    clusters = redisAnnot.smembers(b"search$weird$" + gene)
-    return clusters
 
 def getProbesets(cluster):
     address = b"trans$probeset$" + cluster
@@ -232,9 +36,6 @@ def geneLevelASPValues(cluster, customMA = None, probesets = None):
     if probesets == []:
         raise ValueError("probesets can't be empty")
     probesets2 = getProbesets(cluster)
-    #print(probesets)
-    #print("passed", probesets.difference(probesets2))
-    #print("would have received", probesets2.difference(probesets))
     corrections = []
     for i, probeset in enumerate(probesets):
         data, probemetadata = dataForProbeset(probeset)
@@ -270,64 +71,58 @@ def probesetIter(level = None):
         if probesets:
             yield (trans, probesets)
 
-def writePValues(probeset, pvalue):
-    redisAlterSplice.zadd("probe$ASPvalue", pvalue, probeset)
-
-@cache
-def totalProbesets():
-    return redisAlterSplice.zcard("probe$ASPvalue")
-
 from flask import Flask, request, send_from_directory, current_app
 app = Flask(__name__)
 
 app.debug=True
 
 @app.route("/api/geneList")
-def hello():
+def serveGenes():
     cutoff = 0.05
     allOurGenes = set()
     counter = 0
     result = []
-    for probeset, pvalue in redisAlterSplice.zrange("probe$ASPvalue", 0, -1, withscores = True):
+    for probeset, pvalue in redisConn["alterSplice"].zrange("probe$ASPvalue", 0, -1, withscores = True):
         bonferroniCorrected = pvalue * totalProbesets()
         if bonferroniCorrected > cutoff:
             break
-        transCluster = redisAnnot.smembers(b"search$probeset$" + probeset)
-        transCluster = list(transCluster)
+        transCluster = list(probesetToTrans(probeset))
         assert(len(transCluster) == 1)
         transCluster = transCluster[0]
-        usualName = redisAnnot.smembers(b"search$trans$usual$" + transCluster)
-        result.append([list(d(i) for i in usualName), d(transCluster), bonferroniCorrected])
+        usualName = transToGene(transCluster)
+        result.append([list(usualName), transCluster, bonferroniCorrected])
         allOurGenes.update(usualName)
         counter += 1
-    print(result)
     return json.dumps(result)
 
 # set the project root directory as the static folder, you can set others.
 @app.route('/<path:path>')
-def hello_world(path):
+def serveStatics(path):
     return current_app.send_static_file(path)
 
 @app.route('/')
-def serve_index():
+def serveIndex():
     return current_app.send_static_file("index.html")
-
-import redis
-import json
-
 
 @app.route('/api/genecode/<path:path>')
 def genes(path):
-    path = path.split("/")
+    path = path.split(":")
     c = path[0]
     left = int(path[1])
     right = int(path[2])
     return json.dumps(funcGenes(c, left, right))
 
+import re
+def validateInput(i):
+    e = ValueError("invalid or insecure input.")
+    if len(i) > 24 or not re.findall("^[\w]+$", i):
+        raise e
+
 def funcGenes(c, left, right):
+    validateInput(c)
     response = []
-    for elem in redisGenecode.zrangebyscore("genecode$" + c, left, right):
-        parsedElem = json.loads(elem.decode("ascii", errors="ignore"))
+    for elem in redisConn["genecode"].zrangebyscore("genecode$" + c, left, right):
+        parsedElem = json.loads(d(elem))
         response.append(parsedElem)
     return(response)
 
@@ -338,23 +133,21 @@ def dberror(e):
     return json.dumps({"error": "db"}), 500
 
 annotDB = 1
-r = redis.StrictRedis(host='localhost', db=annotDB, port=port)
 @app.route('/api/clusterID/<path:path>')
 def clusterID(path):
     chromosome = None
     leftMost = 2**64
     rightMost = -2**64
     result = []
-    for probeset in r.smembers(b'trans$probeset$' + bytes(path)):
-        elems = json.loads(r.hget(b'probeset$metadata', probeset).decode("ascii", errors="ignore"))
+    for probeset in transToProbeset(path):
+        elems = probesetAnnotationMetadata(probeset)
         if elems[3] < leftMost:
             leftMost = elems[3]
         if elems[4] > rightMost:
             rightMost = elems[4]
         if elems[-1] == "core":
-            probesetData = dataForProbeset(str(elems[0]))[0]
-            checkPValue = pValueForProbeset(modalAllele(), probesetData)
-            print(modalAllele())
+            probesetData = dataForProbeset(str(elems[0]))
+            checkPValue = pValueForProbeset(probesetData)
             extendedElems = elems + [checkPValue * totalProbesets(), modalAllele(), probesetData]
             result.append(extendedElems)
 
