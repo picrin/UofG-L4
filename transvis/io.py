@@ -218,13 +218,13 @@ def convertToStr(bytesOrInt):
         return str(bytesOrInt)
 
 # TODO make these to be tests.
-initDB()
+# initDB()
 # print(metadataKeys())
 # print(transToProbeset(2315100))
 # print(geneToTrans("MBNL1"))
 # print(probesetAnnotationMetadata(2315104))
 # print(type(convertToStr(b'10')))
-print(list(probesetToTrans(b'3307988')))
+#print(list(probesetToTrans(b'3307988')))
 # print(extendedToTrans('NONHSAT051717'))
 # print(transToGene(2315100))
 # print(transToExtended(2315100))

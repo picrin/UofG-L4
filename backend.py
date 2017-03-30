@@ -102,7 +102,7 @@ def serveStatics(path):
 
 @app.route('/')
 def serveIndex():
-    return current_app.send_static_file("index.html")
+    return current_app.send_static_file("css/newIndex.html")
 
 @app.route('/api/genecode/<path:path>')
 def genes(path):
