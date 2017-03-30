@@ -2,35 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <script src="css/script.js"> </script>
-    <script src="https://d3js.org/d3.v4.js"></script>
-    <!-- CSS -->
-    <link rel="stylesheet" href="css/poole.css">
-    <link rel="stylesheet" href="css/syntax.css">
-    <link rel="stylesheet" href="css/hyde.css">
+    <title> ASS </title>
+    <script src="parent.js"> </script>
   </head>
-  <body id="body">
-  <div class="sidebar">
-  <ol id="sidebar"></ol>
-  </div>
-  <div class="content container">
-    <div id="svgParent">
-      <svg width="100%" xmlns="http://www.w3.org/2000/svg" id="geneCanvas" style="border:1px solid black;">
-        <script>
-          function onExonClick(evt) {
-            window.parent.handleExonClick(evt)
-          }
-          function onAffyClick(evt) {
-            window.parent.handleAffyClick(evt)
-          }
-        </script>
-      </svg>
-    </div>
-    <div id="plots">
-    </div>
-  </div>
-  </body>
+  <frameset cols="20%,40%,40%">
+    <frame src="geneList.html" id="geneList">
+    <frame src="geneCanvas.html" id="geneCanvas">
+    <frame src="genePlots.html" id="genePlots">
+  </frameset>
 </html>

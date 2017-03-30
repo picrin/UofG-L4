@@ -1,6 +1,7 @@
 import collections
 import numpy as np
 from scipy.stats import distributions
+import re
 def d(bytes):
     """
     A dumb decoder from bytes to ascii. Should only be used where unicode is
@@ -28,6 +29,19 @@ def e(str):
     @param str: a string-like object.
     """
     return bytes(str, encoding="ascii", errors="ignore")
+
+def validateInput(i):
+    """
+    Basic input validator. Makes sure that passed string is made up of only
+    ascii characters and not too long.
+
+    Should be good enough to prevent HTML injection and some other forms of
+    attack.
+    """
+    e = ValueError("invalid or insecure input.")
+    if len(i) > 24 or not re.findall("^[\w]+$", i):
+        raise e
+
 
 
 cache_db = {}
