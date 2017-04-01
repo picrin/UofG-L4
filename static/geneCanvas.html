@@ -7,23 +7,11 @@
   </head>
   <body>
     <p> Gene search: <input id="geneSearch"></p>
-    <script>
-      var input = document.getElementById('geneSearch')
-      var timer
-      input.addEventListener('keyup',function(evt) {
-        clearTimeout(timer)
-        timer = setTimeout(function(){chooseGene(evt)}, 350)
-      })
-    </script>
     <div id="svgParent">
       <svg width="100%" xmlns="http://www.w3.org/2000/svg" id="geneCanvas" style="border:1px solid black;">
         <script>
-          function onExonClick(evt) {
-            window.parent.handleExonClick(evt)
-            console.log(window.parent)
-          }
           function onAffyClick(evt) {
-            window.parent.handleAffyClick(evt)
+            handleAffyClick(evt)
           }
         </script>
       </svg>

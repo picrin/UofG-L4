@@ -1,7 +1,7 @@
 function driveSearchBox() {
   var input = document.getElementById('geneSearch')
   var timer
-  input.addEventListener('keyup',function(evt) {
+  input.addEventListener('keyup' ,function(evt) {
     clearTimeout(timer)
     timer = setTimeout(function(){chooseGene(evt)}, 350)
   })
@@ -34,9 +34,7 @@ function createExonRect(left, right, track, exonID) {
 }
 
 function setMinimumHeight(desiredHeight) {
-  var geneCanvas = window.parent.document.getElementById("geneCanvas")
-  var doc = geneCanvas.contentDocument
-  var canvas = doc.getElementById("geneCanvas")
+  var canvas = document.getElementById("geneCanvas")
   var currentHeight = canvas.getAttributeNS(null, "height")
    if (desiredHeight > currentHeight) {
       canvas.setAttributeNS(null, "height", desiredHeight + 10)
@@ -94,15 +92,6 @@ function selectExon(exonRect) {
   var affyData = geneCanvas.contentWindow.affyData
 
   var p = affyData[exonID]
-
-  var container = containerForExonPlot(exonID)
-  for (var prop in p) {
-    if (!p.hasOwnProperty(prop)) {
-        continue;
-    }
-    plotForExon(container, modalAlle, affyData[exonID][prop])
-  }
-
 }
 
 function flipSelection(exonRect) {
@@ -115,18 +104,18 @@ function flipSelection(exonRect) {
 }
 
 function handleAffyClick(evt) {
+  window.parent.genePlots$handleAffyClick(evt.target.getAttribute("data-affyID"))
   var svgobj = evt.target
   flipSelection(svgobj)
 }
 
 function clearCanvas() {
-  var geneCanvas = window.parent.document.getElementById("geneCanvas")
-  var doc = geneCanvas.contentDocument
-  var myNode = doc.getElementById("svgParent")
+  var myNode = document.getElementById("svgParent")
   while (myNode.firstChild) {
     myNode.removeChild(myNode.firstChild)
   }
   window.trackRanges = [[]]
+  window.trackRangesAffy = [[]]
   myNode.innerHTML='<svg width="100%" xmlns="http://www.w3.org/2000/svg" id="geneCanvas" style="border:1px solid black;">'
 
   //myNode.setAttributeNS(null, "height", 1)
@@ -138,7 +127,6 @@ var modalAlle = [11, 12, 12, 12, 83, 186, 240, 261, 290, 297, 297, 345, 373, 408
 
 function getGeneView(gene) {
   var id = gene
-  console.log(id)
   var httpRequest = new XMLHttpRequest()
   var request = '/api/clusterID/' + id
   httpRequest.onreadystatechange = function(){
@@ -194,9 +182,7 @@ function createConnector(left, right, track) {
 }
 
 function translateCoord(rangeLeft, rangeRight, coord) {
-  var geneCanvas = window.parent.document.getElementById("geneCanvas")
-  var doc = geneCanvas.contentDocument
-  var canvas = doc.getElementById("geneCanvas")
+  var canvas = document.getElementById("geneCanvas")
   var gBCR = canvas.getBoundingClientRect()
   var w = gBCR.right - gBCR.left
   var newCoord =  ((coord - rangeLeft) / (rangeRight - rangeLeft)) * w
@@ -282,9 +268,7 @@ function drawExons(units, rangeLeft, rangeRight) {
     return 0;
   })
   var track = chooseTrack(exons[0][0], exons[exons.length - 1][1])
-  var geneCanvas = window.parent.document.getElementById("geneCanvas")
-  var doc = geneCanvas.contentDocument
-  var canvas = doc.getElementById("geneCanvas")
+  var canvas = document.getElementById("geneCanvas")
   for (var i = 0; i < exons.length - 1; i++) {
     var right = exons[i][1]
     var left = exons[i + 1][0]
@@ -312,9 +296,7 @@ function drawExons(units, rangeLeft, rangeRight) {
 
 
 function drawAffy(left, right, pValue, affyID, leftMost, rightMost) {
-  var geneCanvas = window.parent.document.getElementById("geneCanvas")
-  var doc = geneCanvas.contentDocument
-  var canvas = doc.getElementById("geneCanvas")
+  var canvas = document.getElementById("geneCanvas")
   translatedLeft = translateCoord(leftMost, rightMost, left - 0.005 * (rightMost - leftMost))
   translatedRight = translateCoord(leftMost, rightMost, right + 0.005 * (rightMost - leftMost))
   var track = chooseTrackAffy(translatedLeft, translatedRight)
@@ -345,50 +327,10 @@ function loadUnits(chr, left, right) {
   httpRequest.send(null);
 }
 
-function loadGenes() {
-  var i = 1
-  var sidebar = document.getElementById("sidebar")
-  var httpRequest = new XMLHttpRequest()
-  httpRequest.onreadystatechange = function(){
-    if (httpRequest.readyState === XMLHttpRequest.DONE) {
-      var geneList = JSON.parse(httpRequest.responseText)
-      var numbers = 0
-      for (var gene of geneList) {
-        var link = document.createElement("a")
-        var row = document.createElement("tr")
-        var left = document.createElement("th")
-        var middle = document.createElement("th")
-        var right = document.createElement("th")
-        link.setAttribute("href", "#")
-        link.setAttribute("onclick", "getGeneView(this)")
-        if (gene[0].length >= 1) {
-          link.innerHTML = gene[0][0]
-        } else {
-          link.innerHTML = "?"
-        }
-        left.innerHTML = i + "."
-        i += 1
-        right.innerHTML = gene[2].toPrecision(2)
-        link.setAttributeNS(null, "data-clusterID", gene[1])
-        middle.appendChild(link)
-        sidebar.appendChild(row)
-        row.appendChild(left)
-        row.appendChild(middle)
-        row.appendChild(right)
-        numbers+=1
-      }
-    }
-  }
-  httpRequest.open('GET', '/api/geneList', true);
-  httpRequest.send(null);
-}
-
-
 (function(window, document) {
   "use strict"
   window.onload = init
   function init() {
     driveSearchBox()
-    loadGenes()
   }
 })(window, document)

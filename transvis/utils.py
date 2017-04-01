@@ -1,6 +1,4 @@
 import collections
-import numpy as np
-from scipy.stats import distributions
 import re
 def d(bytes):
     """
@@ -114,6 +112,8 @@ def linregressTesting(X, Y):
 
 # That's slightly more numerically stable.
 def linregress(x, y):
+    import numpy as np
+    from scipy.stats import distributions
     """
     Linear regression taken from scipy. It appears to be numerically stable.
     """

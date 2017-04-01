@@ -5,6 +5,7 @@ from transvis.io import *
 from transvis.alterSplice import *
 import transvis.geneList
 import transvis.geneCanvas
+import transvis.genePlots
 from flask import Flask, request, send_from_directory, current_app
 import os
 
@@ -33,12 +34,15 @@ def serveGenes(*args, **kwargs):
 def serveStatics(path):
     return current_app.send_static_file(path)
 
+@app.route('/api/plotData/<int:probesetID>')
+def servePlotData(*args, **kwargs):
+    return transvis.genePlots.clusterID(*args, **kwargs)
 
 @app.errorhandler(redis.exceptions.ConnectionError)
 def dberror(e):
     return json.dumps({"error": "db"}), 500
 
-@app.route('/api/clusterID/<path:path>')
+@app.route('/api/clusterID/<string:clusID>')
 def clusterID(*args, **kwargs):
     return transvis.geneCanvas.clusterID(*args, **kwargs)
 

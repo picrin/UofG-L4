@@ -204,11 +204,14 @@ def probesetPatientData(probeset):
     produced in the same order.
 
     @param probeset: valid probeset ID.
-    @return: k-tuples of intensities, with k between 1 and 4, corresponding to
-    L{alleleData}
+    @return: return n tuples, where n is the number of patients. Each tuple has
+    arity k, with k between 1 and 4, corresponding to the number of probes in
+    the probeset.
     """
     address = "probes$probeset$" + str(probeset)
     patientData = redisConn["probe"].lrange(address, 0, -1)
+
+    # remember to reverse the list
     return [json.loads(d(i)) for i in patientData[::-1]]
 
 def convertToStr(bytesOrInt):

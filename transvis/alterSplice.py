@@ -44,8 +44,14 @@ def pValueForProbeset(probeData):
     return min(leftresult, rightresult) * 2
 
 def dataForProbeset(probeset):
-    return {seq[0] : t for t, seq  in zip(zip(*probesetPatientData(probeset)),
-                                          probesetChipMetadata(probeset))}
+    chipMeta = probesetChipMetadata(probeset)
+    annotMeta = probesetAnnotationMetadata(probeset)
+    annotMetaKeys = metadataKeys()
+    probesetData = probesetPatientData(probeset)
+    perProbeData = {seq[0]: t for t, seq  in zip(zip(*probesetData), chipMeta)}
+    annotation = {k: m for m, k in zip(annotMeta, annotMetaKeys)}
+    alleleLength = modalAllele()
+    return {"probeData": perProbeData, "annotation": annotation, "chipMeta": chipMeta, "modalAllele": alleleLength}
 
 def pValueForProbesetWithoutAS(modalAllele, probeData):
     result = [0] * len(modalAllele)
