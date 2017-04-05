@@ -58,12 +58,19 @@ function createAffyRect(left, right, track, pValue, affyID) {
   }
   exonRect.setAttributeNS(null, "fill", color)
   exonRect.setAttributeNS(null, "fill-opacity", unselectedOpc)
-  exonRect.setAttributeNS(null, "onclick", "onAffyClick(evt)")
+  exonRect.setAttributeNS(null, "onclick", "handleAffyClick(evt)")
   exonRect.setAttributeNS(null, "height", heightC)
   exonRect.setAttributeNS(null, "data-selected", 0)
   exonRect.setAttributeNS(null, "data-affyID", affyID)
+  exonRect.setAttributeNS(null, "id", "affy-" + affyID)
 
   return exonRect
+}
+
+function handleRemovePlot(affyID){
+  var canvas = document.getElementById("geneCanvas")
+  var exonRect = canvas.getElementById(affyID)
+  deselectExon(exonRect)
 }
 
 function deselectExon(exonRect) {
@@ -71,40 +78,29 @@ function deselectExon(exonRect) {
   exonRect.removeAttributeNS(null, "stroke-width")
   exonRect.setAttributeNS(null, "fill-opacity", unselectedOpc)
   exonRect.setAttributeNS(null, "data-selected", 0)
-  var exonID = exonRect.getAttributeNS(null, "data-affyID")
-  var plotID = exonRect.innerHTML
-  releasePlotID()
-  removePlotForExon(exonID)
-  exonRect.innerHTML = ""
 }
 
 function selectExon(exonRect) {
   exonRect.setAttributeNS(null, "stroke", "black")
-  exonRect.setAttributeNS(null, "stroke-width", "1")
-  exonRect.setAttributeNS(null, "fill-opacity", "1")
+  exonRect.setAttributeNS(null, "stroke-width", 1)
+  exonRect.setAttributeNS(null, "fill-opacity", 1)
   exonRect.setAttributeNS(null, "data-selected", 1)
   exonRect.setAttributeNS(null, "font-family", "monospace")
-  var plotID = getPlotID()
-  exonRect.innerHTML = plotID
-  var exonID = exonRect.getAttributeNS(null, "data-affyID")
-
-  var geneCanvas = window.parent.document.getElementById("geneList")
-  var affyData = geneCanvas.contentWindow.affyData
-
-  var p = affyData[exonID]
 }
 
 function flipSelection(exonRect) {
-  isSelected = exonRect.getAttributeNS(null, "data-selected")
+  var isSelected = exonRect.getAttributeNS(null, "data-selected")
+  var dataAffyID = exonRect.getAttribute("data-affyID")
   if (isSelected == 1) {
     deselectExon(exonRect)
+    window.parent.genePlots$handleAffyDeselect(dataAffyID)
   } else {
     selectExon(exonRect)
+    window.parent.genePlots$handleAffySelect(dataAffyID)
   }
 }
 
 function handleAffyClick(evt) {
-  window.parent.genePlots$handleAffyClick(evt.target.getAttribute("data-affyID"))
   var svgobj = evt.target
   flipSelection(svgobj)
 }

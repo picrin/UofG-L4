@@ -9,5 +9,41 @@
   <body>
     <table border="1" id="plots">
     </table>
+    <script id="plotRow" type="text/template">
+      <tr id="affy-{{exonID}}">
+        <td>
+          <p>
+            name: {{name}}
+          </p>
+          <p>
+            trans cluster: {{transcript_cluster_id}}
+          </p>
+          <p>
+            probeset: {{probeset_id}}
+          </p>
+          <p>
+            start: {{start}}
+          </p>
+          <p>
+            stop: {{stop}}
+          </p>
+          <p>
+            chromosome: {{seqname}}
+          </p>
+          <button onclick="handleRemove(this)">
+            Remove
+          </button>
+          <button onclick="handleHide(this)" data-hidden="0">
+            Hide
+          </button>
+        </td>
+        {{#plots}}
+        <td data-containsPlot="1">
+          <p style="font-family:monospace;font-size:10px"> {{sequence}} </p>
+          {{&plot}}
+        </td>
+        {{/plots}}
+      </tr>
+    </script>
   </body>
 </html>

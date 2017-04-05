@@ -1,25 +1,59 @@
-function containerForExonPlot(exonID) {
-  var plots = document.getElementById("plots")
-  var exPlotID = "plot-" + exonID
-  container = document.createElementNS(null, "tr")
-  container.setAttribute("border", 1)
 
-  outerButton = document.createElementNS(null, "th")
-  button = document.createElement("button")
-  button.innerHTML = "Remove"
-  outerButton.appendChild(button)
-  container.appendChild(outerButton)
-  var clickedButton
-  button.setAttribute("onclick", "this.parentElement.parentElement.remove()")
-  container.id = exPlotID
-  plots.appendChild(container)
-  return container
+function addPlot(exonID, plots, sequences, annotation, name) {
+  var plotList = []
+  for (var i = 0; i < plots.length; i++) {
+    plotList.push({"plot": plots[i], "sequence": sequences[i]})
+  }
+  var plots = document.getElementById("plots")
+  var plotRow = document.getElementById("plotRow").innerHTML
+  var result = parent.Mustache.render(plotRow, Object.assign(annotation, {exonID: exonID, plots: plotList, name: name}))
+  plots.insertAdjacentHTML("beforeend", result)
 }
 
+function flip(int) {
+  if (int == 1) return 0;
+  if (int == 0) return 1;
+}
 
-function plotForExon(container, X, Y) {
-  div = document.createElement( "th")
-  container.appendChild(div)
+function handleRemove(button) {
+  var tr = button.parentElement.parentElement
+  try {
+    parent.geneCanvas$handleRemovePlot(tr.id)
+  } finally {
+    removePlots(tr.id)
+  }
+}
+
+function removePlots(trid) {
+  var tr = document.getElementById(trid)
+  tr.parentElement.removeChild(tr)
+}
+
+function handleHide(button) {
+  console.log(button.parent)
+  var isHidden = button.getAttribute("data-hidden")
+  button.setAttribute("data-hidden", flip(isHidden))
+  var children = button.parentElement.parentElement.children;  console.log(children)
+  for (var i = 0; i < children.length; i++) {
+    var child = children[i]
+    if (child.getAttribute("data-containsplot") == 1) {
+      if (flip(isHidden)){
+        child.setAttribute("hidden", "1")
+      }
+      else {
+        child.removeAttribute("hidden")
+      }
+    }
+  }
+  if (flip(isHidden)) {
+    button.innerHTML = "Show"
+  } else {
+    button.innerHTML = "Hide"
+  }
+}
+
+function plotForProbe(X, Y) {
+  var div = document.createElement("div")
 
   var chartHeight = 200
   var chartWidth = 200
@@ -35,7 +69,7 @@ function plotForExon(container, X, Y) {
   var height = chartWidth - margin.top - margin.bottom
 
   var x = d3.scaleLinear()
-     .domain([0, d3.max(data, function(d) { return d[0]; })])
+    .domain([0, d3.max(data, function(d) { return d[0]; })])
     .range([ 0, width ]);
 
   var y = d3.scaleLinear()
@@ -44,7 +78,7 @@ function plotForExon(container, X, Y) {
 
   var chart = d3.select(div)
   	.append('svg:svg')
-  	.attr('width', chartWidth)
+  	.attr('width', "100%")
   	.attr('height', chartHeight)
   	.attr('class', 'chart')
 
@@ -89,7 +123,7 @@ function plotForExon(container, X, Y) {
     .attr("cy", function (d) {return y(d[1])} ) // translate y value to a pixel
     .attr("cx", function (d,i) {return x(d[0])} ) // translate x value
     .attr("r", 2);
-
+  return div.innerHTML
 }
 
 function removePlotForExon(exonID) {
@@ -99,28 +133,36 @@ function removePlotForExon(exonID) {
   var plot = doc.getElementById("plot-" + exonID)
   plots.removeChild(plot)
   while (plot !== undefined) {
-    plot = document.getElementById("plot-" + exonID)
+    var plot = document.getElementById("plot-" + exonID)
     if (plot !== undefined) {
       plots.removeChild(plot)
     }
   }
 }
 
-function plot(exonID){
+function handlePlot(exonID){
   var httpRequest = new XMLHttpRequest()
   httpRequest.onreadystatechange = function() {
     if (httpRequest.readyState === XMLHttpRequest.DONE) {
       var d = JSON.parse(httpRequest.responseText)
-      var container = containerForExonPlot(exonID)
       console.log(d)
-      probeData = d["probeData"]
-      for (var key in probeData) {
-        if (probeData.hasOwnProperty(key)) {
-          var Y = probeData[key]
-          var X = d["modalAllele"]
-          plotForExon(container, X, Y)
-        }
+      var probeData = d["probeData"]
+      var chipMeta = d["chipMeta"]
+      var X = d["modalAllele"]
+
+      var plots = []
+      var sequences = []
+      //console.log(probeData)
+      //console.log(chipMeta)
+
+      for (var metaPiece of chipMeta) {
+        var key = metaPiece[0]
+        var Y = probeData[key]
+        plots.push(plotForProbe(X, Y))
+        sequences.push(key)
       }
+      console.log(plots)
+      addPlot(exonID, plots, sequences, d["annotation"], d["names"].toString())
     }
   }
   httpRequest.open('GET', '/api/plotData/' + exonID, true);
