@@ -20,15 +20,18 @@ with open("isDebug") as f:
 
 initDB()
 
-
 @app.route('/')
 def serveIndex():
     print("hi")
     return current_app.send_static_file("index.html")
 
-@app.route("/api/geneList")
+@app.route("/api/geneList/<int:left>/<int:right>")
 def serveGenes(*args, **kwargs):
     return transvis.geneList.serveGenes(*args, **kwargs)
+
+@app.route("/api/searchGene/<string:name>")
+def searchGenes(*args, **kwargs):
+    return transvis.geneCanvas.searchGene(*args, **kwargs)
 
 @app.route('/<path:path>')
 def serveStatics(path):

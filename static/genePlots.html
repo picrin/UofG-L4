@@ -12,29 +12,34 @@
     <script id="plotRow" type="text/template">
       <tr id="affy-{{exonID}}">
         <td>
-          <p>
-            name: {{name}}
-          </p>
-          <p>
-            trans cluster: {{transcript_cluster_id}}
-          </p>
-          <p>
-            probeset: {{probeset_id}}
-          </p>
-          <p>
-            start: {{start}}
-          </p>
-          <p>
-            stop: {{stop}}
-          </p>
-          <p>
-            chromosome: {{seqname}}
-          </p>
+          <div data-containsplot="1">
+            <p>
+              name: {{name}}
+            </p>
+            <p>
+              trans cluster: {{transcript_cluster_id}}
+            </p>
+            <p>
+              probeset: {{probeset_id}}
+            </p>
+            <p>
+              start: {{start}}
+            </p>
+            <p>
+              stop: {{stop}}
+            </p>
+            <p>
+              chromosome: {{seqname}}
+            </p>
+          </div>
           <button onclick="handleRemove(this)">
             Remove
           </button>
           <button onclick="handleHide(this)" data-hidden="0">
             Hide
+          </button>
+          <button onclick="handleIdentify(this)">
+            Identify
           </button>
         </td>
         {{#plots}}

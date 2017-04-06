@@ -1,6 +1,11 @@
-function loadGenes() {
-  var i = 1
+function loadGenes(howMany) {
   var sidebar = document.getElementById("sidebar")
+  var length = sidebar.children.length
+  var left = length
+  var right = howMany + length - 1
+  var i = length + 1
+  console.log(length)
+  console.log(left, right)
   var httpRequest = new XMLHttpRequest()
   httpRequest.onreadystatechange = function(){
     if (httpRequest.readyState === XMLHttpRequest.DONE) {
@@ -32,7 +37,7 @@ function loadGenes() {
       }
     }
   }
-  httpRequest.open('GET', '/api/geneList', true);
+  httpRequest.open('GET', '/api/geneList/' + left + '/' + right, true)
   httpRequest.send(null);
 }
 
@@ -40,6 +45,6 @@ function loadGenes() {
   "use strict"
   window.onload = init
   function init() {
-    loadGenes()
+    loadGenes(10)
   }
 })(window, document)

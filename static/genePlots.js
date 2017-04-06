@@ -29,11 +29,12 @@ function removePlots(trid) {
   tr.parentElement.removeChild(tr)
 }
 
-function handleHide(button) {
-  console.log(button.parent)
-  var isHidden = button.getAttribute("data-hidden")
-  button.setAttribute("data-hidden", flip(isHidden))
-  var children = button.parentElement.parentElement.children;  console.log(children)
+function handleIdentify(button) {
+  var tr = button.parentElement.parentElement
+  parent.geneCanvas$handleFlickerPlot(tr.id)
+}
+
+function handleChildren(isHidden, children) {
   for (var i = 0; i < children.length; i++) {
     var child = children[i]
     if (child.getAttribute("data-containsplot") == 1) {
@@ -45,6 +46,15 @@ function handleHide(button) {
       }
     }
   }
+}
+
+function handleHide(button) {
+  var isHidden = button.getAttribute("data-hidden")
+  button.setAttribute("data-hidden", flip(isHidden))
+  var children = button.parentElement.parentElement.children
+  var closeChildren = button.parentElement.children
+  handleChildren(isHidden, children)
+  handleChildren(isHidden, closeChildren)
   if (flip(isHidden)) {
     button.innerHTML = "Show"
   } else {
@@ -145,7 +155,6 @@ function handlePlot(exonID){
   httpRequest.onreadystatechange = function() {
     if (httpRequest.readyState === XMLHttpRequest.DONE) {
       var d = JSON.parse(httpRequest.responseText)
-      console.log(d)
       var probeData = d["probeData"]
       var chipMeta = d["chipMeta"]
       var X = d["modalAllele"]

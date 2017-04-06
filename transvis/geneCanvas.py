@@ -2,6 +2,12 @@ from transvis.utils import *
 from transvis.io import *
 from transvis.alterSplice import *
 
+def searchGene(name):
+    searchResult = geneToTrans(name)
+    if not searchResult:
+        searchResult = extendedToTrans(name)
+    return json.dumps(list(searchResult))
+
 def funcGenes(c, left, right):
     validateInput(c)
     response = []

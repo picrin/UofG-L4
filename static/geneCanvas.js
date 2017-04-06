@@ -3,8 +3,27 @@ function driveSearchBox() {
   var timer
   input.addEventListener('keyup' ,function(evt) {
     clearTimeout(timer)
-    timer = setTimeout(function(){chooseGene(evt)}, 350)
+    timer = setTimeout(function(){chooseGene(evt.target.value)}, 350)
   })
+}
+
+function chooseGene(name) {
+  var httpRequest = new XMLHttpRequest()
+  var request = "/api/searchGene/" + name
+  httpRequest.onreadystatechange = function() {
+    if (httpRequest.readyState === XMLHttpRequest.DONE) {
+        if (httpRequest.status === 200) {
+          var result = JSON.parse(httpRequest.responseText)
+          getGeneView(result[0])
+        }
+        else {
+          console.error(httpRequest.status, "when performing", request)
+        }
+    }
+  }
+
+  httpRequest.open('GET', request, true);
+  httpRequest.send(null);
 }
 
 var heightC = 20
@@ -306,6 +325,14 @@ function drawAffy(left, right, pValue, affyID, leftMost, rightMost) {
   text.setAttributeNS(null, "data-probeset", affyID)
   text.innerHTML = affyID
   canvas.appendChild(text)
+}
+
+
+function handleFlickerPlot(affyID) {
+  var canvas = document.getElementById("geneCanvas")
+  var exonRect = canvas.getElementById(affyID)
+  deselectExon(exonRect)
+  setTimeout(function(){selectExon(exonRect)}, 300);
 }
 
 
