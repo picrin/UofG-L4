@@ -13,3 +13,7 @@ function genePlots$handleAffyDeselect(affyID) {
 function geneCanvas$handleRemovePlot(affyID) {
   window.frames["geneCanvas"].contentWindow.handleRemovePlot(affyID)
 }
+
+function geneCanvas$handleFlickerPlot(affyID) {
+  window.frames["geneCanvas"].contentWindow.handleFlickerPlot(affyID)
+}
