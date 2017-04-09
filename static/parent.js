@@ -1,19 +1,29 @@
+
+function getFrame(frameName) {
+  var chromeFrame = window.frames[frameName].contentWindow
+  if (chromeFrame === undefined) {
+    var safariFrame = window.frames[frameName].window
+    return safariFrame
+  }
+  return chromeFrame
+}
+
 function geneCanvas$getGeneView(clusterID) {
-  window.frames["geneCanvas"].contentWindow.getGeneView(clusterID)
+  getFrame("geneCanvas").getGeneView(clusterID)
 }
 
 function genePlots$handleAffySelect(probesetID) {
-  window.frames["genePlots"].contentWindow.handlePlot(probesetID)
+  getFrame("genePlots").handlePlot(probesetID)
 }
 
 function genePlots$handleAffyDeselect(affyID) {
-  window.frames["genePlots"].contentWindow.removePlots("affy-" + affyID)
+  getFrame("genePlots").removePlots("affy-" + affyID)
 }
 
 function geneCanvas$handleRemovePlot(affyID) {
-  window.frames["geneCanvas"].contentWindow.handleRemovePlot(affyID)
+  getFrame("geneCanvas").handleRemovePlot(affyID)
 }
 
 function geneCanvas$handleFlickerPlot(affyID) {
-  window.frames["geneCanvas"].contentWindow.handleFlickerPlot(affyID)
+  getFrame("geneCanvas").handleFlickerPlot(affyID)
 }
