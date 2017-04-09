@@ -18,7 +18,8 @@ function loadGenes(howMany) {
         var middle = document.createElement("th")
         var right = document.createElement("th")
         link.setAttribute("href", "#")
-        link.setAttribute("onclick", "window.parent.geneCanvas$getGeneView(this.getAttribute('data-clusterID'))")
+        link.setAttribute("data-clusterID", gene[1])
+        link.setAttribute("onclick", "var clusterID = this.getAttribute('data-clusterID'); window.parent.geneCanvas$getGeneView(clusterID);")
         if (gene[0].length >= 1) {
           link.innerHTML = gene[0][0]
         } else {
@@ -27,7 +28,6 @@ function loadGenes(howMany) {
         left.innerHTML = i + "."
         i += 1
         right.innerHTML = gene[2].toPrecision(2)
-        link.setAttributeNS(null, "data-clusterID", gene[1])
         middle.appendChild(link)
         sidebar.appendChild(row)
         row.appendChild(left)
