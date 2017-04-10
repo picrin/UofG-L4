@@ -179,7 +179,23 @@ def alleleData():
 
 @cache
 def totalProbesets():
+    """
+    Returns the count of all probesets (irrespective of annotation level) in the
+    database
+    """
     return redisConn["alterSplice"].zcard("probe$ASPvalue")
+
+
+def transIter():
+    """
+    Return an iterator through each transcription cluster in the database.
+
+    @return: transcription cluster iterator.
+    """
+    transIter = redisConn["annot"].scan_iter(match="trans\$probeset\$*")
+    for elem in transIter:
+        yield d(elem).split("$")[-1]
+
 
 def probesetChipMetadata(probeset):
     """
@@ -214,11 +230,12 @@ def probesetPatientData(probeset):
     # remember to reverse the list
     return [json.loads(d(i)) for i in patientData[::-1]]
 
-def convertToStr(bytesOrInt):
-    try:
-        return d(bytesOrInt)
-    except AttributeError:
-        return str(bytesOrInt)
+def probesetData(probeset):
+    """
+        Return the same data as L{probesetPatientData}, but aggregated per
+        probeset as opposed to per patient.
+    """
+    return zip(*probesetPatientData(probeset))
 
 # TODO make these to be tests.
 # initDB()

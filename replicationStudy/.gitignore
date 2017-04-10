@@ -1,0 +1,15 @@
+CEL_files
+__pycache__/
+.ipynb*
+*.pyc
+TNNT2Data
+Annotation
+Data
+*.aux
+*.dvi
+*.log
+*.pdf
+*.out
+*.tex
+backups
+dump.rdb

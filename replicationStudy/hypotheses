@@ -1,0 +1,34 @@
+# 3 hypotheses about Myotonic Dystrophy.
+
+"identified genes" refers to the list of 434 genes identified using the AS-statistic (as discussed in the previous meeting, and explained in my previous e-mail). "identified exons" refers to the list of 740 exons with evidence of Alternative Splicing belonging to the 434 genes.
+
+## Master Switch Hypothesis
+Disease-induced changes in expression of MBNL1 (and possibly MBNL2 and CELF1) act as a "master switch" of gene expression, by directly causing alternative splicing of dozens of genes involved in regulation of gene expression (mostly Zinc Finger proteins), which in turn indirectly causes changes in gene expression of hundreds of genes targeted by these regulatory genes.
+
+### Supporting Evidence
+1. Hypergeometric test of a list of 434 identified genes against a list of 877 genes tagged "gene expression" in gene cards gives us an overlap of 35, with p-value of 6.8×10^(-5). That's the list of genes: ZNF714 ZNF737 CHD9 ZNF468 ZNF28 ZNF75A ZNF92 ZNF254 ZNF493 TAF2 ZNF480 ZNF382 ZNF257 ZNF430 ZNF208 ZNF100 ZNF429 ZNF729 TP53BP2 KAT2A ZNF626 ZNF43 CCNH ZNF184 SESN3 NEDD4L SMAD2 ZNF676 ZNF415 ZNF347 ZNF433 ZNF492 ZNF600 ZNF665 ZNF99.
+
+### Possible Pitfalls
+1. Zinc Fingers can be over-represented in the "gene expression" tag, because of the ease of classification.
+2. Multiplicity. I've (unsuccessfully) tested one more "gene ontology" hypothesis before (against the tag actin cytoskeleton). We should probably validate in another cohort.
+3. Alternative explanation would be that the proteins encoded by these regulatory genes bind directly to the toxic CUG or CCUG repeat, which in turn affects the transcription of the genes encoding these regulatory proteins.
+
+## Hypothesis about genetic causes of the butterfly-shaped pigmentary changes in the retina of MD patients
+Disease-induced changes of alternative splicing of genes closely co-located at 1q31.3: Complement Factor H (CFH), Complement Factor H Related 1 (CFHR1), 2 (CFHR2), 3 (CFHR3), 5 (CFHR5) cause butterfly-chaped pigmentary changes to the retina of MD patients.
+
+### Supporting Evidence
+1. Out of 740 identified exons, disproprtionately many (24) belong to just 5 genes: CFH, CFHR1, CFHR2, CFHR3 and CFHR5. All of these genes are located in a very short stretch of DNA, just 0.4 Mb.
+2. All of these genes have been found, by numerous independent studies, to be involved in Age-Related Macular Degeneration (macula is a part of retina).
+3. Two independent studies found butterfly-shaped pigementary changes in the patients with MD.
+
+### Possibe Pitfalls
+1. A proper statistical test should be used to check just how likely finding 24 AS events in a 0.4 Mb DNA stretch would be (avoiding prosecutor's fallacy).
+
+## Not Sequestration Hypothesis.
+Toxic CUG or CCUG repeats cause Alternative Splicing of MBNL1, MBNL2 and CELF1. This causes down-regulation of MBNL1 and MBNL2, and up-regulation of CELF1.
+
+### Supporting Evidence
+1. It appears to be well-established that sequestration of MBNL1 causes alternative splicing defects in its downstream targets. This theory suffers from a major flaw: if sequestration of MBNL1 occurs, we would expect to see sequestration, and therefore down-regulation of CELF1. However, mouse models contradict this, as mice over-expressing CELF1 show MD phenotypes.
+2. Both us and Nakamori conclude that Alternative Splicing defects occur in MBNL1 and MBNL2. This AS defects could be interpreted as down-regulating MBNL1, and are an alternative explanation of MBNL1 down-regulation (as opposed to sequestration).
+3. A specific look at CELF1 shows evidence of AS defects at two exons, with p-values 9.3e-05 and 0.0006 respectively, which isn't enough to survive our multiplicity correction. We can verify in the Nakamori's cohort.
+

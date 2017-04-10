@@ -1,4 +1,5 @@
 dump.rdb
+*.rdb
 log
 transvis.pem
 venv3

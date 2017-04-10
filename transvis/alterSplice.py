@@ -8,7 +8,6 @@ import math
 def cachedAlleleData():
     return alleleData()
 
-
 @cache
 def modalAllele():
     metadata = alleleData()
@@ -47,8 +46,7 @@ def dataForProbeset(probeset):
     chipMeta = probesetChipMetadata(probeset)
     annotMeta = probesetAnnotationMetadata(probeset)
     annotMetaKeys = metadataKeys()
-    probesetData = probesetPatientData(probeset)
-    perProbeData = {seq[0]: t for t, seq  in zip(zip(*probesetData), chipMeta)}
+    perProbeData = {seq[0]: t for t, seq in zip(probesetData(probeset), chipMeta)}
     annotation = {k: m for m, k in zip(annotMeta, annotMetaKeys)}
     alleleLength = modalAllele()
     return {"probeData": perProbeData, "annotation": annotation, "chipMeta": chipMeta, "modalAllele": alleleLength}

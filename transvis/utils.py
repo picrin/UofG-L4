@@ -69,8 +69,18 @@ def cache(func):
         return funcResult
     return wrapper
 
-LinregressResult = collections.namedtuple("LinregressResult", ["slope", "intercept", "leftpvalue", "rightpvalue", "stderr"])
 
+def convertToStr(bytesOrInt):
+    """
+    Reliably converts input type into a string (works for bytes and ints so far)
+    """
+    try:
+        return d(bytesOrInt)
+    except AttributeError:
+        return str(bytesOrInt)
+
+
+LinregressResult = collections.namedtuple("LinregressResult", ["slope", "intercept", "leftpvalue", "rightpvalue", "stderr"])
 def linregressTesting(X, Y):
     """
     Easily understandable linear regression.
