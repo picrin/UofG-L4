@@ -12,9 +12,20 @@ function chooseGene(name) {
   var request = "/api/searchGene/" + name
   httpRequest.onreadystatechange = function() {
     if (httpRequest.readyState === XMLHttpRequest.DONE) {
+        var additionalChoice = document.getElementById("additionalChoice")
+        additionalChoice.innerHTML=''
         if (httpRequest.status === 200) {
           var result = JSON.parse(httpRequest.responseText)
-          getGeneView(result[0])
+          if (result.length > 1) {
+            for(i = 0; i < result.length; i++) {
+              var button = document.createElement("button")
+              button.innerHTML = result[i]
+              button.setAttribute("onclick", "getGeneView(" + result[i] + ")")
+              additionalChoice.appendChild(button)
+            }
+          } else {
+            getGeneView(result[0])
+          }
         }
         else {
           console.error(httpRequest.status, "when performing", request)
