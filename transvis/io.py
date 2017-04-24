@@ -232,10 +232,40 @@ def probesetPatientData(probeset):
 
 def probesetData(probeset):
     """
-        Return the same data as L{probesetPatientData}, but aggregated per
-        probeset as opposed to per patient.
+    Return the same data as L{probesetPatientData}, but aggregated per
+    probeset as opposed to per patient.
     """
     return zip(*probesetPatientData(probeset))
+
+def genecodeIter(chromosome):
+    for elem in redisConn["genecode"].zrangebyscore("genecode$" + chromosome, "-inf", "+inf"):
+        parsedElem = json.loads(d(elem))
+        yield parsedElem
+
+def setGenecodeGenenameToProbeset(genename, probeset):
+    return redisConn["genecode"].sadd("genename$probeset$" + genename, probeset)
+
+def getGenecodeGenenameToProbeset(genename):
+    return set(d(i) for i in redisConn["genecode"].smembers("genename$probeset$" + genename))
+
+def setGenecodeGenenameBoundary(genename, chromosome, suffix, left, right):
+    leftRight = redisConn["genecode"].get("genename$boundary$" + genename)
+    if not leftRight:
+        leftRight = [2**64, -2**64, None, None]
+    else:
+        leftRight = json.loads(d(leftRight))
+    leftRight[2] = chromosome
+    leftRight[3] = suffix
+    if left < leftRight[0]:
+        leftRight[0] = left
+    if leftRight[1] < right:
+        leftRight[1] = right
+    leftRight
+    return redisConn["genecode"].set("genename$boundary$" + genename, json.dumps(leftRight))
+
+def getGenecodeGenenameBoundary(genename):
+    leftRight = redisConn["genecode"].get("genename$boundary$" + genename)
+    return json.loads(d(leftRight))
 
 # TODO make these to be tests.
 # initDB()
