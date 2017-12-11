@@ -6,3 +6,6 @@ venv3
 activate
 html
 *.pyc
+.idea/
+new/json_temp/
+new/input/

@@ -1,0 +1,35 @@
+{
+	"patient_ids": ["id1", "id2", "id3", "id4", "id5"],
+	"repeat_length": [20, 30, 40, 50, 75],
+	"expression_data": {
+		"trans_id1": {
+			"probeset_id1": {
+				"HGNC": "ILF3",
+				"chromosome": "X",
+				"left_coord": 11023040,
+				"right_coord": 1459202,
+				"sequence": "ATATATCTGTGTCAC",
+				"intensities": [10, 20, 30, 40, 50]
+			},
+			"probeset_id2": {
+				"chromosome": "X",
+				"left_coord": 11023040,
+				"right_coord": 1459202,
+				"sequence": "GTGCTCGATA",
+				"HGNC": "ILF3",
+				"intensities": [1, 2, 11, 22, 121]
+			},
+			"probeset_id3": {
+				"chromosome": "X",
+				"left_coord": 11023040,
+				"right_coord": 1459202,
+				"sequence": "TATAGAGAGCACACCCTCTCG",
+				"HGNC": "ILF3",
+				"intensities": [29, 31, 21, 22, 23]
+			}
+		},
+                "trans_id2": {...},
+                "trans_id3": {...},
+                ...
+	}
+}
